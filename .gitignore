@@ -1,0 +1,8 @@
+.env
+__pycache__/
+*.pyc
+qdrant_data/
+models/*.joblib
+data/company.db
+data/transactions.csv
+qdrant_memory_data/

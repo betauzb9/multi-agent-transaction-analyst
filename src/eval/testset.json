@@ -1,0 +1,14 @@
+[
+  {"question": "How many transactions were categorized as Dining & Coffee?", "reference": "120 transactions were categorized as Dining & Coffee in the synthetic dataset."},
+  {"question": "What is the category taxonomy used by this system?", "reference": "12 top-level categories plus an Other/Uncategorized fallback, listed in docs/category_taxonomy.md."},
+  {"question": "How does the model handle a previously unseen merchant?", "reference": "It uses character n-gram TF-IDF, which can still find useful sub-string overlap with known merchants; if confidence is still low it falls back to Other/Uncategorized."},
+  {"question": "What happens to a low-confidence prediction?", "reference": "It is returned as Other/Uncategorized instead of a possibly-wrong confident label, per the 0.55 confidence threshold."},
+  {"question": "How many total transactions are in the database?", "reference": "1440 transactions in the synthetic reference dataset."},
+  {"question": "What category would a transaction described as 'SQ *STARBUCKS #4471' for $5.75 pos get?", "reference": "Dining & Coffee, with high confidence, using the trained classifier."},
+  {"question": "Why is a 12-category taxonomy used instead of a more granular one?", "reference": "Finer granularity fragments training data per class and confuses end users; 12 categories balances usefulness and classifier performance."},
+  {"question": "How are rare categories evaluated?", "reference": "With macro-F1 and per-class precision/recall, not overall accuracy alone, since accuracy hides poor performance on small classes."},
+  {"question": "What metadata besides text is used by the model?", "reference": "Transaction amount (log-scaled) and transaction type (one-hot encoded)."},
+  {"question": "How many transactions were categorized as Groceries, and what merchants make up that category?", "reference": "120 Groceries transactions; merchants include Walmart, Kroger, Whole Foods, Aldi, Trader Joe's, Safeway."},
+  {"question": "What are the known limitations of this system?", "reference": "Synthetic reference data, no true OOV guarantee, weak amount/type signals alone, added multi-agent latency — see docs/limitations.md."},
+  {"question": "How many transactions were categorized as Travel last year, and what's the average amount?", "reference": "120 Travel transactions; average amount can be computed via SQL/code agent from data/company.db."}
+]
