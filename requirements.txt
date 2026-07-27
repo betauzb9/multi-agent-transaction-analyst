@@ -1,4 +1,4 @@
-﻿# Core ML (FIN-01 categorizer) - no API keys needed
+# Core ML (FIN-01 categorizer) — no API keys needed
 scikit-learn>=1.4
 pandas>=2.0
 joblib>=1.3
@@ -9,20 +9,21 @@ langchain>=0.3
 langchain-core>=0.3
 langchain-community>=0.3
 langchain-text-splitters>=0.3
-langchain-google-genai>=2.0
+langchain-google-genai>=2.0   # free Gemini LLM + embeddings
 pydantic>=2.0
 python-dotenv>=1.0
 
-# Vector store (F2, F10) - embedded mode, no signup
+# Vector store (F2, F10) — embedded mode, no signup
 qdrant-client>=1.9
 langchain-qdrant>=0.2
-# Optional: web search agent (F4) - app skips gracefully without a key
+# Optional: web search agent (F4) — app skips gracefully without a key
 tavily-python>=0.5
 
 # Optional: observability (F12)
 langfuse>=2.0
 
 # Optional: evaluation (F11)
+
 
 # Frontend / deployment (F13/F14)
 gradio>=4.0
