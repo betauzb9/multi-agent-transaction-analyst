@@ -53,6 +53,7 @@ with gr.Blocks(title="FIN-01 Multi-Agent Transaction Analyst") as demo:
     submit_btn.click(run_and_trace, inputs=question_box, outputs=[trace_box, answer_box])
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 7860))
+  port = int(os.environ.get("PORT", 7860))
     use_share = os.environ.get("GRADIO_SHARE", "false").lower() == "true"
-    demo.launch(server_name="0.0.0.0", server_port=port, share=use_share)
+    print(f"[startup] launching Gradio on 0.0.0.0:{port} (share={use_share})", flush=True)
+    demo.launch(server_name="0.0.0.0", server_port=port, share=use_share, ssr_mode=False)
