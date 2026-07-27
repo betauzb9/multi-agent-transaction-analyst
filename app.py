@@ -1,12 +1,17 @@
-"""
-F13/F14 — Streaming frontend + deployment (easiest, no-card path from the guide):
+﻿"""
+F13/F14 - Streaming frontend + deployment:
 a Gradio UI that shows the live multi-agent trace (supervisor -> agent -> critic -> answer).
 
 Local run:
     python app.py
-Public link (no card, ~72h), e.g. from Google Colab:
-    demo.launch(share=True)
+Public link from Google Colab (no card, ~72h):
+    set env var GRADIO_SHARE=true before running, or just call demo.launch(share=True)
+Render (always-on, no card):
+    Render sets $PORT automatically; this binds to 0.0.0.0:$PORT so Render's own
+    public URL reaches the app directly (no share=True needed/wanted here).
 """
+import os
+
 import gradio as gr
 
 from src.graph import get_app, config
@@ -25,7 +30,7 @@ def run_and_trace(question: str):
         config={"recursion_limit": config.RECURSION_LIMIT},
     ):
         for node_name, node_state in step_output.items():
-            trace_lines.append(f"**{node_name}** → {node_state.get('steps', [])[-1:]}")
+            trace_lines.append("**" + node_name + "** -> " + str(node_state.get("steps", [])[-1:]))
             if node_state.get("answer"):
                 final_answer = node_state["answer"]
             yield "\n\n".join(trace_lines), final_answer
@@ -38,7 +43,7 @@ with gr.Blocks(title="FIN-01 Multi-Agent Transaction Analyst") as demo:
     gr.Markdown(
         "# Multi-Agent Transaction Analyst (FIN-01)\n"
         "Ask about categorized transactions, the category taxonomy, or the model's "
-        "methodology. Watch the agent trace live: supervisor → specialist(s) → critic → answer."
+        "methodology. Watch the agent trace live: supervisor -> specialist(s) -> critic -> answer."
     )
     question_box = gr.Textbox(label="Question", placeholder="How many transactions were categorized as Dining & Coffee?")
     submit_btn = gr.Button("Ask", variant="primary")
@@ -48,5 +53,6 @@ with gr.Blocks(title="FIN-01 Multi-Agent Transaction Analyst") as demo:
     submit_btn.click(run_and_trace, inputs=question_box, outputs=[trace_box, answer_box])
 
 if __name__ == "__main__":
-    # share=True gives a public link with no credit card, no server (~72h) — see README F14.
-    demo.launch(share=True)
+    port = int(os.environ.get("PORT", 7860))
+    use_share = os.environ.get("GRADIO_SHARE", "false").lower() == "true"
+    demo.launch(server_name="0.0.0.0", server_port=port, share=use_share)
