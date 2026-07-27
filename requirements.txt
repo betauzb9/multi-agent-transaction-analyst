@@ -16,7 +16,6 @@ python-dotenv>=1.0
 # Vector store (F2, F10) — embedded mode, no signup
 qdrant-client>=1.9
 langchain-qdrant>=0.2
-
 # Optional: web search agent (F4) — app skips gracefully without a key
 tavily-python>=0.5
 
