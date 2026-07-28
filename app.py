@@ -181,7 +181,7 @@ CUSTOM_CSS = """
 
 theme = gr.themes.Soft(primary_hue="orange", secondary_hue="slate")
 
-with gr.Blocks(title=APP_TITLE, theme=theme, css=CUSTOM_CSS) as demo:
+with gr.Blocks(title=APP_TITLE, css=CUSTOM_CSS) as demo:
     gr.HTML("<div class='app-header'><h1>\U0001F916 " + APP_TITLE + "</h1><p>" + APP_SUBTITLE + "</p></div>")
 
     with gr.Row():
@@ -210,6 +210,7 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=CUSTOM_CSS) as demo:
                 label="",
                 lines=6,
                 interactive=False,
+                show_copy_button=True,
                 elem_id="answer-card",
                 placeholder="The answer will appear here once the agents finish.",
             )
