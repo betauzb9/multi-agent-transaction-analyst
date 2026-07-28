@@ -1,118 +1,137 @@
-# FIN-01 — Multi-Agent Transaction Analyst
+# 🤖 Multi-Agent AI Analyst
 
-A **multi-agent AI analyst** (per the *Multi-Agent AI Analyst — Project Guide & Rubric*)
-applied to the **FIN-01 FinTech capstone scenario**: automatic transaction categorization.
+**A multi-agent AI system that categorizes financial transactions and answers natural-language questions about them — with a live, streaming trace of the agents thinking.**
 
-- The **ML core** (`src/ml/`) is the FIN-01 deliverable: a trained classifier that assigns a
-  spending category to a raw transaction (merchant text + amount + type).
-- The **multi-agent layer** (`src/agents/`, `src/graph.py`) is a supervisor-led team of agents
-  that can answer natural-language analyst questions about those categorized transactions —
-  e.g. *"How many transactions were categorized as Dining & Coffee, and why do users spend
-  there?"* — by combining a **SQL query** (the count) with **retrieved methodology docs**
-  (the "why") and a **critic** that verifies the combined answer before it's shown.
+🔗 **Live demo:** [multi-agent-transaction-analyst.onrender.com](https://multi-agent-transaction-analyst.onrender.com/)
 
-## How the two documents map together
+![Multi-Agent AI Analyst preview](preview.png)
 
-| Guide feature | FIN-01 application |
+> ⏳ The demo runs on a free Render instance and spins down after inactivity — the first request after a while may take ~50s to wake up.
+
+---
+
+## What it does
+
+Ask questions like:
+
+- *"How many transactions were categorized as Dining & Coffee?"*
+- *"What is the category taxonomy used by this system?"*
+- *"How does the model handle a previously unseen merchant?"*
+- *"What category would 'SQ \*STARBUCKS #4471' for $5.75 get?"*
+
+...and watch a team of specialist agents route the question, gather evidence, draft an answer, and have it checked by a critic before it's shown — all visible in real time in the UI.
+
+## How it works
+
+A **supervisor agent** routes each question to one or more specialists, then a **critic agent** verifies the drafted answer against the evidence before approving it (or sending it back for revision):
+
+```mermaid
+flowchart LR
+    Q[Question] --> S{Supervisor}
+    S -->|docs / methodology| R[Retriever agent]
+    S -->|outside knowledge| W[Web agent]
+    S -->|counts / aggregates| D[Data / SQL agent]
+    S -->|math / classifier calls| C[Code agent]
+    R --> S
+    W --> S
+    D --> S
+    C --> S
+    S -->|enough evidence| G[Generate answer]
+    G --> CR{Critic}
+    CR -->|approved| A[Final answer]
+    CR -->|needs revision| S
+```
+
+- **ML core** — a scikit-learn text classifier assigns a spending category to a raw transaction (merchant text + amount + type), falling back to `Other / Uncategorized` when confidence is low rather than guessing.
+- **Retriever agent** — answers "why/how" questions from the ingested methodology and taxonomy docs (embedded, local Qdrant vector store).
+- **Data (SQL) agent** — runs read-only queries over the categorized-transactions database.
+- **Code agent** — runs sandboxed Python for exact math/aggregation, or calls the trained classifier directly on a new transaction.
+- **Web agent** — optional, answers questions outside the local docs/database (skips gracefully without a Tavily key).
+- **Critic** — rejects an answer that states a number not backed by the SQL/code evidence, capped at a fixed number of revision passes so the graph always terminates.
+- **Memory** — recalls earlier turns so follow-up questions ("...and last quarter?") have context.
+
+## Tech stack
+
+| Layer | Tools |
 |---|---|
-| F2 Ingestion & vector store | Ingests `docs/` (taxonomy, methodology, limitations) |
-| F3 Retriever agent | Answers "why/how does the model decide" questions |
-| F4 Web agent | Answers questions outside our docs/database (optional, needs a Tavily key) |
-| F5 Data (SQL) agent | Queries `data/company.db`, the categorized-transactions table |
-| F6 Code agent | Runs exact math/aggregation, or calls the trained classifier directly on a new transaction |
-| F7 Supervisor | Routes each question to the right specialist(s) |
-| F8 Critic | Rejects an answer that states a number not in the SQL/code evidence |
-| F10 Memory | Recalls earlier turns for follow-ups ("...and last quarter?") |
-| F11 Evaluation | RAGAS + LLM-judge over the 12-question test set in `src/eval/testset.json` |
+| Agent orchestration | [LangGraph](https://github.com/langchain-ai/langgraph), [LangChain](https://github.com/langchain-ai/langchain) |
+| LLM + embeddings | Google Gemini (`gemini-2.5-flash`, `text-embedding-004`) — free tier, no card |
+| Vector store | [Qdrant](https://qdrant.tech/) (embedded, local, no signup) |
+| Structured data | SQLite |
+| Classifier | scikit-learn (TF-IDF + linear model) |
+| Frontend | [Gradio](https://www.gradio.app/) |
+| Observability | [Langfuse](https://langfuse.com/) (optional tracing) |
+| Deployment | [Render](https://render.com/) (free, always-on web service) |
+
+## Results
+
+The classifier and the agent pipeline are both evaluated automatically:
+
+| Metric | Score |
+|---|---|
+| Classifier accuracy (held-out) | **99.65%** |
+| Classifier macro-F1 (held-out) | **99.65%** |
+| Agent pipeline — avg. LLM-judge score | **4.75 / 5** across a 12-question test set |
 
 ## Quickstart
 
 ```bash
-python -m venv .venv && source .venv/bin/activate     # or your preferred env manager
+git clone https://github.com/betauzb9/multi-agent-transaction-analyst.git
+cd multi-agent-transaction-analyst
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env                                   # then fill in YOUR OWN GOOGLE_API_KEY
+cp .env.example .env   # then fill in your own GOOGLE_API_KEY
 ```
 
-**Get your own free keys** (never share one key across a group — rate limits are per account):
-- `GOOGLE_API_KEY` — required. https://aistudio.google.com/apikey (no card)
-- `TAVILY_API_KEY` — optional, web agent. https://tavily.com (no card)
+Get a free key (never share one across accounts — rate limits are per key):
+- `GOOGLE_API_KEY` — **required**. https://aistudio.google.com/apikey (no card)
+- `TAVILY_API_KEY` — optional, enables the web agent. https://tavily.com (no card)
 - `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` — optional, tracing. https://cloud.langfuse.com (no card)
 
-### Build order (follow in this order — each phase depends on the last)
-
 ```bash
-# Phase 1 — Foundation
-python data/generate_synthetic_data.py     # or swap in a real public dataset first — see docs/methodology.md §1
-python -m src.ml.train_categorizer         # trains + evaluates the categorizer (already tested: 99.7% held-out accuracy)
-python -m src.ingestion                    # embeds docs/ into Qdrant (embedded, no signup)
+# 1. Build the ML core
+python data/generate_synthetic_data.py
+python -m src.ml.train_categorizer
+python -m src.ingestion            # embeds docs/ into the local vector store
 
-# Phase 2 — Specialist agents (test each alone)
-python -c "from src.ml.predict import categorize; print(categorize('SQ *STARBUCKS #4471', 5.75, 'pos'))"
-python -c "from src.agents.retriever import retriever_agent; from src.state import initial_state; print(retriever_agent(initial_state('What happens with low-confidence predictions?')))"
-
-# Phase 3 — Full multi-agent graph
+# 2. Ask a question end-to-end
 python -m src.graph "How many transactions were categorized as Dining & Coffee?"
 
-# Phase 4 — Evaluation
-python -m src.eval.harness                 # RAGAS + LLM-judge over 12 questions
+# 3. Run the evaluation harness
+python -m src.eval.harness
 
-# Phase 5 — Frontend + deploy
-python app.py                              # add share=True in app.py for a free public link (~72h, no card)
+# 4. Launch the UI
+python app.py
 ```
 
 ## Project structure
 
 ```
-data/            synthetic dataset generator (swap for a real public dataset before submission)
-docs/            taxonomy / methodology / limitations — ingested by the retriever AND the FIN-01 documentation deliverable
-models/          trained categorizer + eval report (created by train_categorizer.py)
+data/            synthetic transaction data generator
+docs/            category taxonomy, methodology, and limitations — ingested by the retriever agent
+models/          trained classifier + evaluation report
 src/
-  config.py      F1 — reads all keys from .env
-  state.py       F1 — shared AgentState
-  llm.py         LLM + embeddings factory (Gemini)
-  ingestion.py   F2 — builds the Qdrant vector store from docs/
-  ml/
-    features.py            shared normalization/feature functions
-    train_categorizer.py   trains + evaluates the FIN-01 classifier
-    predict.py             inference + confidence-based fallback
-  agents/
-    retriever.py   F3
-    web.py         F4 (optional, skips gracefully without a key)
-    data_sql.py    F5 — read-only text-to-SQL over data/company.db
-    code_agent.py  F6 — sandboxed Python execution, can call the trained classifier
-    supervisor.py  F7 (+ generate_answer)
-    critic.py      F8
-  graph.py       F9 — LangGraph wiring; ask() runs one full question
-  memory.py      F10 — long-term memory over past turns
-  eval/
-    testset.json   12 evaluation questions
-    harness.py      F11 — RAGAS + LLM-judge
-  observability.py F12 — optional Langfuse tracing
-app.py           F13/F14 — Gradio streaming frontend + easiest no-card deploy path
+  config.py      reads settings from .env
+  state.py       shared agent state
+  llm.py         LLM + embeddings client factory
+  ingestion.py   builds the vector store from docs/
+  ml/            classifier training, features, and inference
+  agents/        retriever, web, data (SQL), code, supervisor, critic
+  graph.py       LangGraph wiring — the multi-agent flow
+  memory.py      long-term memory over past turns
+  eval/          test set + evaluation harness (LLM-judge / RAGAS)
+  observability.py   optional Langfuse tracing
+app.py           Gradio frontend + deployment entry point
 ```
 
-## What's already verified to work (no API key needed)
+## Known limitations
 
-- `data/generate_synthetic_data.py` — generates 1,440 synthetic transactions across 12 categories
-- `src/ml/train_categorizer.py` — trains in seconds, **99.7% held-out accuracy, 99.7% macro-F1**
-- `src/ml/predict.py` — correctly classifies known merchants with high confidence, and falls
-  back to `Other / Uncategorized` on an unrecognized merchant instead of guessing
-- `src/agents/code_agent.py`'s sandbox — runs normal code, **blocks disallowed imports**
-  (`import os` fails), and **enforces the runtime cap** (an infinite loop is killed at 5s)
+- The bundled dataset is synthetic; a real dataset should be swapped in before drawing production conclusions (see `docs/methodology.md`).
+- A genuinely novel merchant with no overlap with training data falls back to `Other / Uncategorized` rather than being correctly labeled.
+- The critic is itself an LLM and reduces, but doesn't eliminate, the chance of an incorrect answer slipping through.
 
-Everything under `src/agents/`, `src/graph.py`, `src/ingestion.py`, `src/memory.py`,
-`src/eval/harness.py` and `app.py` depends on `langchain`/`langgraph`/`gradio`/`qdrant-client`,
-which need `pip install -r requirements.txt` plus your own `GOOGLE_API_KEY` to run — wire them
-up locally following the build order above.
+See `docs/limitations.md` for the full list of limitations, risks, and recommended next steps.
 
-## Before you submit
+## License
 
-1. Replace the synthetic dataset with a real public dataset (see `docs/methodology.md` §1) and
-   re-run `train_categorizer.py`.
-2. Run the full build order above end-to-end and capture: the supervisor graph screenshot, a
-   frontend trace screenshot, a Langfuse trace, and the eval metrics table (see the guide's
-   "Required visuals" and "Submission checklist" sections).
-3. Do the "3 wrong questions" error analysis (see the guide's "Error analysis" section) —
-   for each, say which agent failed (mis-routed, wrong SQL, code error, missed retrieval, or
-   critic let a bad answer through) and one fix.
-4. Fill in `docs/limitations.md` and `docs/methodology.md` with your real dataset's specifics.
+No license file is currently included — all rights reserved by default. Add a `LICENSE` file (e.g. MIT) if you'd like to allow reuse.
