@@ -210,7 +210,7 @@ with gr.Blocks(title=APP_TITLE, css=CUSTOM_CSS) as demo:
                 label="",
                 lines=6,
                 interactive=False,
-                show_copy_button=True,
+             
                 elem_id="answer-card",
                 placeholder="The answer will appear here once the agents finish.",
             )
