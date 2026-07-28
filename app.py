@@ -1,4 +1,4 @@
-﻿"""
+"""
 F13/F14 - Streaming frontend + deployment:
 a Gradio UI that shows the live multi-agent trace (supervisor -> agent -> critic -> answer).
 
@@ -210,7 +210,6 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=CUSTOM_CSS) as demo:
                 label="",
                 lines=6,
                 interactive=False,
-                show_copy_button=True,
                 elem_id="answer-card",
                 placeholder="The answer will appear here once the agents finish.",
             )
