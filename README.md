@@ -4,7 +4,7 @@
 
 🔗 **Live demo:** [multi-agent-transaction-analyst.onrender.com](https://multi-agent-transaction-analyst.onrender.com/)
 
-![Multi-Agent AI Analyst preview](preview.png)
+
 
 > ⏳ The demo runs on a free Render instance and spins down after inactivity — the first request after a while may take ~50s to wake up.
 
