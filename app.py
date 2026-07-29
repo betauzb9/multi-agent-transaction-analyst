@@ -178,16 +178,10 @@ CUSTOM_CSS = """
     line-height: 1.5 !important;
 }
 """
-CUSTOM_HEAD = """
-<meta property="og:title" content="Multi-Agent AI Analyst" />
-<meta property="og:description" content="Ask about categorized transactions, the category taxonomy, or the model's methodology. Watch the agents think in real time." />
-<meta property="og:image" content="https://raw.githubusercontent.com/betauzb9/multi-agent-transaction-analyst/main/preview.png" />
-<meta property="og:url" content="https://multi-agent-transaction-analyst.onrender.com/" />
-<meta name="twitter:card" content="summary_large_image" />
-"""
+
 theme = gr.themes.Soft(primary_hue="orange", secondary_hue="slate")
 
-with gr.Blocks(title=APP_TITLE, css=CUSTOM_CSS, head=CUSTOM_HEAD) as demo:
+with gr.Blocks(title=APP_TITLE, css=CUSTOM_CSS) as demo:
     gr.HTML("<div class='app-header'><h1>\U0001F916 " + APP_TITLE + "</h1><p>" + APP_SUBTITLE + "</p></div>")
 
     with gr.Row():
