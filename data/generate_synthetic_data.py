@@ -1,10 +1,15 @@
 """
-Generates a synthetic transaction dataset for FIN-01 (Automatic Transaction Categorization).
+Generates an O'zbekiston (Uzbekistan) market-realistic transaction dataset for FIN-01
+(Automatic Transaction Categorization).
 
-This is a STAND-IN so the whole pipeline (ML training + the multi-agent analyst's SQL agent)
-runs end-to-end with zero downloads and zero cost. Before final submission, swap this for a
-real public dataset (see docs/methodology.md, section 1) and re-run
-`src/ml/train_categorizer.py`.
+This mimics real local payment-system SMS/statement text (Payme, Click, Uzcard, Humo, P2P
+transfers) with amounts in UZS (so'm), so the whole pipeline (ML training + the multi-agent
+analyst's SQL agent) runs end-to-end with zero downloads and zero cost, while already looking
+like a real Uzbek business's transaction feed.
+
+If you have an ACTUAL bank/Payme/Click export (CSV) for a real business, prefer that over this
+generator — see docs/methodology.md §1 for the required columns (date, description, amount,
+txn_type, category) and how to plug it in instead of running this script.
 
 Usage:
     python data/generate_synthetic_data.py
@@ -20,31 +25,80 @@ from datetime import datetime, timedelta
 
 random.seed(42)
 
+# Category names are in Uzbek since this is the language the business owner (and the deployed
+# app's users) will see in SQL results, taxonomy docs, and generated answers.
 MERCHANTS = {
-    "Groceries": ["WALMART", "KROGER", "WHOLE FOODS", "ALDI", "TRADER JOES", "SAFEWAY"],
-    "Dining & Coffee": ["STARBUCKS", "MCDONALDS", "CHIPOTLE", "SUBWAY", "LOCAL DINER", "PANERA"],
-    "Transport & Fuel": ["UBER", "LYFT", "SHELL OIL", "CHEVRON", "CITY TRANSIT", "EXXON"],
-    "Utilities & Bills": ["CITY ELECTRIC CO", "AT&T WIRELESS", "COMCAST CABLE", "WATER AUTHORITY"],
-    "Rent & Housing": ["GREENFIELD PROPERTY MGMT", "PARKSIDE APARTMENTS", "MORTGAGE SERVICING CO"],
-    "Entertainment & Subscriptions": ["NETFLIX", "SPOTIFY", "AMC THEATERS", "DISNEY PLUS"],
-    "Shopping & Retail": ["AMAZON", "TARGET", "BEST BUY", "H&M", "IKEA"],
-    "Health & Pharmacy": ["CVS PHARMACY", "WALGREENS", "CITY MEDICAL CLINIC", "AETNA COPAY"],
-    "Travel": ["DELTA AIRLINES", "MARRIOTT HOTELS", "AIRBNB", "EXPEDIA"],
-    "Financial Services": ["BANK ATM WITHDRAWAL", "WIRE TRANSFER FEE", "LOAN PAYMENT CO"],
-    "Income & Transfers": ["PAYROLL DEPOSIT ACME CORP", "ZELLE TRANSFER RECEIVED", "VENMO CASHOUT"],
-    "Education": ["STATE UNIVERSITY TUITION", "CAMPUS BOOKSTORE", "COURSERA INC"],
+    "Oziq-ovqat": [
+        "KORZINKA", "MAKRO", "HAVAS SUPERMARKET", "UZUM MARKET", "CARREFOUR",
+        "MEGA PLANET OZIQ-OVQAT", "DEHQON BOZORI",
+    ],
+    "Kafe va restoranlar": [
+        "EVOS", "WIMPY", "CHOPAR PIZZA", "KFC", "CAFE CHINARA", "ANDIJON OSHXONASI",
+        "COFFEE BEAN", "BRO CAFE",
+    ],
+    "Transport": [
+        "YANDEX GO", "MYTAXI", "UZAUTO YO'L SOLIG'I", "GAZPROMNEFT AZS",
+        "METRO TOSHKENT", "UZBEKISTON TEMIR YOLLARI", "UZGASOIL AZS",
+    ],
+    "Kommunal to'lovlar": [
+        "TOSHKENT ELEKTR TARMOQLARI", "HUDUDGAZ TA'MINOT", "SUV TA'MINOTI MCHJ",
+        "BEELINE", "UCELL", "UZMOBILE", "UZONLINE INTERNET",
+    ],
+    "Ijara va ko'chmas mulk": [
+        "UY IJARASI TO'LOVI", "OFIS IJARASI TO'LOVI", "KO'CHMAS MULK AGENTLIGI",
+    ],
+    "Ko'ngilochar va obuna": [
+        "UZUM TV", "NETFLIX", "SPOTIFY", "IMAX KINOTEATR", "YOUTUBE PREMIUM",
+        "PLAYSTATION STORE",
+    ],
+    "Xarid va do'konlar": [
+        "ZARA", "LC WAIKIKI", "MEGA PLANET SAVDO", "TASHKENT CITY MALL",
+        "SAMSUNG STORE", "TEXNOMART",
+    ],
+    "Salomatlik va dorixona": [
+        "OILAVIY DORIXONA", "ORIENT PHARM", "TIBBIYOT MARKAZI SOG'LOM AVLOD",
+        "INVIVO LABORATORIYASI",
+    ],
+    "Sayohat": [
+        "UZBEKISTON HAVO YO'LLARI", "HOTEL WYNDHAM TASHKENT", "BOOKING COM",
+        "AVIACHIPTA KASSASI",
+    ],
+    "Moliyaviy xizmatlar": [
+        "KOMISSIYA TO'LOVI", "KREDIT TO'LOVI", "BANKOMAT NAQD PUL YECHISH",
+        "PLASTIK KARTA XIZMAT HAQI",
+    ],
+    "Ish haqi va o'tkazmalar": [
+        "ISH HAQI TO'LOVI", "P2P PLASTIKDAN PLASTIKKA", "ZARABOTNAYA PLATA",
+        "FREELANCE TO'LOVI",
+    ],
+    "Ta'lim": [
+        "TDIU TO'LOV BO'LIMI", "IT PARK KURSLARI", "UDEMY ONLINE KURS",
+        "MAKTABGACHA TA'LIM MARKAZI",
+    ],
 }
 
-TXN_TYPES = ["debit", "credit", "pos", "ach", "transfer"]
+TXN_TYPES = ["click", "payme", "uzcard", "humo", "p2p"]
 
-NOISE_PREFIXES = ["SQ *", "TST* ", "POS ", ""]
-NOISE_SUFFIXES = [" #4471", " #9981 SEATTLE WA", " STORE 0231", " REF9834", ""]
+# Prefixes/suffixes mimic real Payme/Click/Uzcard SMS and statement noise.
+NOISE_PREFIXES = ["PAYME *", "CLICK ", "UZCARD POS ", "HUMO ", "P2P ", ""]
+NOISE_SUFFIXES = [
+    " #4471", " TOSHKENT", " CHILONZOR FILIALI", " REF9834", " YUNUSOBOD", "",
+]
 
+# Amounts in UZS (so'm) — realistic ranges for a small/medium Uzbek business or household.
 AMOUNT_RANGES = {
-    "Groceries": (15, 180), "Dining & Coffee": (4, 65), "Transport & Fuel": (8, 90),
-    "Utilities & Bills": (30, 220), "Rent & Housing": (700, 2200), "Entertainment & Subscriptions": (5, 60),
-    "Shopping & Retail": (10, 400), "Health & Pharmacy": (8, 300), "Travel": (60, 1800),
-    "Financial Services": (2, 50), "Income & Transfers": (200, 4000), "Education": (50, 6000),
+    "Oziq-ovqat": (20_000, 450_000),
+    "Kafe va restoranlar": (15_000, 150_000),
+    "Transport": (5_000, 120_000),
+    "Kommunal to'lovlar": (50_000, 900_000),
+    "Ijara va ko'chmas mulk": (1_500_000, 9_000_000),
+    "Ko'ngilochar va obuna": (15_000, 200_000),
+    "Xarid va do'konlar": (50_000, 3_000_000),
+    "Salomatlik va dorixona": (20_000, 800_000),
+    "Sayohat": (200_000, 8_000_000),
+    "Moliyaviy xizmatlar": (3_000, 100_000),
+    "Ish haqi va o'tkazmalar": (2_000_000, 20_000_000),
+    "Ta'lim": (100_000, 15_000_000),
 }
 
 
@@ -52,7 +106,7 @@ def make_description(merchant: str) -> str:
     return f"{random.choice(NOISE_PREFIXES)}{merchant}{random.choice(NOISE_SUFFIXES)}"
 
 
-def generate(n_per_category: int = 120):
+def generate(n_per_category: int = 150):
     rows = []
     start = datetime(2025, 1, 1)
     for category, merchants in MERCHANTS.items():
@@ -60,8 +114,8 @@ def generate(n_per_category: int = 120):
         for _ in range(n_per_category):
             merchant = random.choice(merchants)
             desc = make_description(merchant)
-            amount = round(random.uniform(lo, hi), 2)
-            txn_type = "credit" if category == "Income & Transfers" else random.choice(TXN_TYPES[:-1])
+            amount = round(random.uniform(lo, hi), -2)  # round to nearest 100 so'm, like real receipts
+            txn_type = "p2p" if category == "Ish haqi va o'tkazmalar" else random.choice(TXN_TYPES[:-1])
             date = start + timedelta(days=random.randint(0, 364))
             rows.append({
                 "date": date.strftime("%Y-%m-%d"),
@@ -75,7 +129,7 @@ def generate(n_per_category: int = 120):
 
 
 def write_csv(rows, path):
-    with open(path, "w", newline="") as f:
+    with open(path, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=["date", "description", "amount", "txn_type", "category"])
         w.writeheader()
         w.writerows(rows)
@@ -112,4 +166,5 @@ if __name__ == "__main__":
     here = os.path.dirname(__file__)
     write_csv(rows, os.path.join(here, "transactions.csv"))
     write_sqlite(rows, os.path.join(here, "company.db"))
-    print(f"Generated {len(rows)} synthetic transactions -> data/transactions.csv, data/company.db")
+    print(f"Generated {len(rows)} synthetic transactions (UZS, Payme/Click/Uzcard style) -> "
+          f"data/transactions.csv, data/company.db")
