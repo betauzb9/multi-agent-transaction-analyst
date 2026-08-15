@@ -70,6 +70,10 @@ def generate_answer(state: AgentState) -> dict:
     draft = get_text(llm.invoke(
         f"Question: {state['question']}\nEvidence:\n{evidence}\n"
         f"Write a concise, grounded answer using only this evidence. If evidence is missing "
-        f"for part of the question, say so explicitly rather than guessing."
+        f"for part of the question, say so explicitly rather than guessing.\n"
+        f"LANGUAGE: detect the language the question was written in (Uzbek — Latin or Cyrillic "
+        f"script, Russian, or English) and write the ENTIRE answer in that same language, "
+        f"regardless of what language the evidence/documents are in. Format any currency "
+        f"amounts as so'm (UZS) with thousands separators, e.g. 1 250 000 so'm."
     ))
     return {"answer": draft, "steps": state["steps"] + ["generate"]}
