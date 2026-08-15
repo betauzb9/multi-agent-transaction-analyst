@@ -63,7 +63,7 @@ def _describe_step(node_name: str, latest_step: str) -> str:
 
 
 def _render_trace(trace_events):
-    """Renders the trace as a vertical timeline of styled step cards (HTML)."""
+    """Renders the trace as a connected vertical timeline — nodes on a line, like a pipeline log."""
     if not trace_events:
         return "<div class='trace-empty'>No steps yet — ask a question to see the agents work.</div>"
 
@@ -73,9 +73,11 @@ def _render_trace(trace_events):
         note = _describe_step(node_name, latest_step)
         rows.append(
             "<div class='trace-step " + css_class + "'>"
-            "<span class='trace-icon'>" + icon + "</span>"
-            "<span class='trace-text'><b>" + label + "</b> — " + note
-            + "<span class='trace-raw'>" + latest_step + "</span></span>"
+            "<span class='trace-node'>" + icon + "</span>"
+            "<div class='trace-body'>"
+            "<span class='trace-label'>" + label + "</span> <span class='trace-note'>— " + note + "</span>"
+            "<span class='trace-raw'>" + latest_step + "</span>"
+            "</div>"
             "</div>"
         )
     return "<div class='trace-timeline'>" + "".join(rows) + "</div>"
@@ -123,116 +125,205 @@ def run_and_trace(question: str):
 
 
 CUSTOM_CSS = """
-.app-header {
-    text-align: center;
-    padding: 6px 0 2px 0;
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&display=swap');
+
+:root {
+    --ink: #0B0F1A;
+    --panel: #121826;
+    --panel-2: #17202F;
+    --line: #263047;
+    --amber: #F5A623;
+    --amber-hover: #FFBB4D;
+    --green: #34D399;
+    --blue: #58A6FF;
+    --violet: #A371F7;
+    --text: #E8ECF6;
+    --text-dim: #8792AA;
 }
+
+.gradio-container { font-family: 'Inter', ui-sans-serif, sans-serif; }
+
+/* ---- header: ticker eyebrow + display headline ---- */
+.app-header { text-align: center; padding: 4px 0 2px 0; }
+.eyebrow-bar {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--text-dim); margin-bottom: 10px;
+}
+.pulse-dot {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--amber);
+    animation: pulse 2s infinite;
+}
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(245,166,35,0.55); }
+    70% { box-shadow: 0 0 0 7px rgba(245,166,35,0); }
+    100% { box-shadow: 0 0 0 0 rgba(245,166,35,0); }
+}
+@media (prefers-reduced-motion: reduce) { .pulse-dot { animation: none; } }
 .app-header h1 {
-    font-size: 1.7rem;
-    margin-bottom: 0.2rem;
+    font-family: 'Space Grotesk', 'Inter', sans-serif;
+    font-weight: 700; font-size: 1.85rem; letter-spacing: -0.01em;
+    margin-bottom: 0.3rem; color: var(--text);
 }
-.app-header p {
-    color: var(--body-text-color-subdued);
-    max-width: 560px;
-    margin: 0 auto;
-    font-size: 0.95rem;
-}
+.app-header p { color: var(--text-dim); max-width: 520px; margin: 0 auto; font-size: 0.95rem; }
 
 /* ---- section labels ---- */
 .section-label {
-    font-size: 0.8rem;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-    color: var(--body-text-color-subdued);
-    margin: 0 0 6px 2px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.72rem; font-weight: 600; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--text-dim); margin: 4px 0 8px 2px;
+}
+.section-label::before { content: '// '; color: var(--amber); }
+
+/* ---- terminal-style question input ---- */
+.cmd-input textarea, .cmd-input input {
+    font-family: 'JetBrains Mono', ui-monospace, monospace !important;
+    font-size: 0.92rem !important;
 }
 
-/* ---- answer card: the thing people actually came for ---- */
+/* ---- answer card: receipt styling ---- */
 #answer-card {
-    border: 1px solid var(--border-color-primary);
-    border-left: 4px solid var(--primary-500, #f0883e);
-    border-radius: 12px;
-    padding: 18px 20px;
-    background: var(--background-fill-secondary);
-    min-height: 96px;
-    font-size: 1.05rem;
-    line-height: 1.55;
+    border: none;
+    border-top: 2px dashed var(--line);
+    border-bottom: 2px dashed var(--line);
+    border-left: 3px solid var(--amber);
+    border-radius: 6px;
+    padding: 20px 22px;
+    background: var(--panel);
+    min-height: 90px;
+    font-size: 1.04rem;
+    line-height: 1.6;
 }
-#answer-card p:first-child { margin-top: 0; }
-#answer-card p:last-child { margin-bottom: 0; }
-#answer-card.placeholder { color: var(--body-text-color-subdued); font-size: 0.95rem; }
-
-/* ---- trace timeline ---- */
-#trace-panel {
-    max-height: 420px;
-    overflow-y: auto;
-    padding-right: 4px;
-}
-.trace-timeline {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-.trace-step {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 10px 12px;
-    border-radius: 10px;
-    border: 1px solid var(--border-color-primary);
-    background: var(--background-fill-secondary);
-    animation: trace-fade-in 0.2s ease-out;
-}
-@media (prefers-reduced-motion: reduce) {
-    .trace-step { animation: none; }
-}
-.trace-icon { font-size: 1.1rem; line-height: 1.4; flex-shrink: 0; }
-.trace-text { font-size: 0.88rem; line-height: 1.4; }
-.trace-raw {
+#answer-card::before {
+    content: '// ANALYST OUTPUT';
     display: block;
-    font-family: var(--font-mono, monospace);
-    font-size: 0.72rem;
-    color: var(--body-text-color-subdued);
-    margin-top: 2px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 10px; letter-spacing: 0.12em;
+    color: var(--amber); margin-bottom: 10px;
 }
-.step-supervisor { border-left: 3px solid #f0883e; }
-.step-agent { border-left: 3px solid #58a6ff; }
-.step-draft { border-left: 3px solid #a371f7; }
-.step-critic { border-left: 3px solid #3fb950; }
+#answer-card p:first-of-type { margin-top: 0; }
+#answer-card p:last-of-type { margin-bottom: 0; }
+
+/* ---- connected-line agent trace ---- */
+#trace-panel { max-height: 440px; overflow-y: auto; padding: 4px 6px 4px 0; }
+.trace-timeline { position: relative; padding-left: 44px; }
+.trace-timeline::before {
+    content: ''; position: absolute; left: 16px; top: 2px; bottom: 2px;
+    width: 2px; background: var(--line);
+}
+.trace-step { position: relative; margin-bottom: 16px; animation: step-in 0.2s ease-out; }
+@media (prefers-reduced-motion: reduce) { .trace-step { animation: none; } }
+@keyframes step-in { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: translateX(0); } }
+.trace-node {
+    position: absolute; left: -44px; top: 0; width: 32px; height: 32px;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    background: var(--panel); border: 2px solid var(--line); font-size: 15px; z-index: 1;
+}
+.trace-body { font-size: 0.88rem; line-height: 1.5; padding-top: 4px; }
+.trace-label { font-weight: 600; color: var(--text); }
+.trace-note { color: var(--text-dim); }
+.trace-raw {
+    display: block; font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.72rem; color: var(--text-dim); opacity: 0.75; margin-top: 2px;
+}
+.step-supervisor .trace-node { border-color: var(--amber); }
+.step-agent .trace-node { border-color: var(--blue); }
+.step-draft .trace-node { border-color: var(--violet); }
+.step-critic .trace-node { border-color: var(--green); }
 .trace-empty, .trace-thinking {
-    padding: 14px;
-    border-radius: 10px;
-    border: 1px dashed var(--border-color-primary);
-    color: var(--body-text-color-subdued);
-    font-size: 0.9rem;
-    text-align: center;
+    padding: 16px; border-radius: 8px; border: 1px dashed var(--line);
+    color: var(--text-dim); font-size: 0.9rem; text-align: center;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
 }
 
-@keyframes trace-fade-in {
-    from { opacity: 0; transform: translateY(-4px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* ---- small screens: stack cleanly, cap trace height ---- */
 @media (max-width: 768px) {
     #trace-panel { max-height: 260px; }
     .app-header h1 { font-size: 1.4rem; }
+    .trace-timeline { padding-left: 38px; }
+    .trace-node { left: -38px; width: 28px; height: 28px; font-size: 13px; }
+    .trace-timeline::before { left: 14px; }
 }
 """
 
-theme = gr.themes.Soft(primary_hue="orange", secondary_hue="slate")
+theme = gr.themes.Base(
+    font=gr.themes.GoogleFont("Inter"),
+    font_mono=gr.themes.GoogleFont("JetBrains Mono"),
+).set(
+    body_background_fill="#0B0F1A",
+    body_background_fill_dark="#0B0F1A",
+    body_text_color="#E8ECF6",
+    body_text_color_dark="#E8ECF6",
+    body_text_color_subdued="#8792AA",
+    body_text_color_subdued_dark="#8792AA",
+    background_fill_primary="#121826",
+    background_fill_primary_dark="#121826",
+    background_fill_secondary="#17202F",
+    background_fill_secondary_dark="#17202F",
+    border_color_primary="#263047",
+    border_color_primary_dark="#263047",
+    border_color_accent="#F5A623",
+    border_color_accent_dark="#F5A623",
+    color_accent="#F5A623",
+    color_accent_soft="rgba(245,166,35,0.12)",
+    color_accent_soft_dark="rgba(245,166,35,0.16)",
+    block_background_fill="#121826",
+    block_background_fill_dark="#121826",
+    block_border_color="#263047",
+    block_border_color_dark="#263047",
+    block_label_background_fill="#121826",
+    block_label_background_fill_dark="#121826",
+    block_label_text_color="#8792AA",
+    block_label_text_color_dark="#8792AA",
+    block_title_text_color="#E8ECF6",
+    block_title_text_color_dark="#E8ECF6",
+    input_background_fill="#17202F",
+    input_background_fill_dark="#17202F",
+    input_border_color="#263047",
+    input_border_color_dark="#263047",
+    input_border_color_focus="#F5A623",
+    input_border_color_focus_dark="#F5A623",
+    input_placeholder_color="#54607A",
+    input_placeholder_color_dark="#54607A",
+    button_primary_background_fill="#F5A623",
+    button_primary_background_fill_dark="#F5A623",
+    button_primary_background_fill_hover="#FFBB4D",
+    button_primary_background_fill_hover_dark="#FFBB4D",
+    button_primary_text_color="#0B0F1A",
+    button_primary_text_color_dark="#0B0F1A",
+    button_secondary_background_fill="#17202F",
+    button_secondary_background_fill_dark="#17202F",
+    button_secondary_background_fill_hover="#1D273A",
+    button_secondary_background_fill_hover_dark="#1D273A",
+    button_secondary_text_color="#E8ECF6",
+    button_secondary_text_color_dark="#E8ECF6",
+    button_secondary_border_color="#263047",
+    button_secondary_border_color_dark="#263047",
+    panel_background_fill="#121826",
+    panel_background_fill_dark="#121826",
+    panel_border_color="#263047",
+    panel_border_color_dark="#263047",
+    code_background_fill="#17202F",
+    code_background_fill_dark="#17202F",
+)
 
 PLACEHOLDER_ANSWER = "_The answer will appear here once the agents finish — usually a few seconds._"
 
 with gr.Blocks(title=APP_TITLE) as demo:
-    gr.HTML("<div class='app-header'><h1>\U0001F916 " + APP_TITLE + "</h1><p>" + APP_SUBTITLE + "</p></div>")
+    gr.HTML(
+        "<div class='app-header'>"
+        "<div class='eyebrow-bar'><span class='pulse-dot'></span>Live &nbsp;·&nbsp; AI Analyst // Transaction Intelligence</div>"
+        "<h1>" + APP_TITLE + "</h1>"
+        "<p>" + APP_SUBTITLE + "</p>"
+        "</div>"
+    )
 
     question_box = gr.Textbox(
-        label="Your question",
+        label="$ your question",
         placeholder="e.g. How many transactions were categorized as Dining & Coffee?",
         lines=2,
         autofocus=True,
+        elem_classes=["cmd-input"],
     )
     with gr.Row():
         submit_btn = gr.Button("Ask", variant="primary", scale=4)
@@ -251,7 +342,6 @@ with gr.Blocks(title=APP_TITLE) as demo:
             answer_box = gr.Markdown(
                 value=PLACEHOLDER_ANSWER,
                 elem_id="answer-card",
-                elem_classes=["placeholder"],
             )
         with gr.Column(scale=2):
             gr.Markdown("Live agent trace", elem_classes=["section-label"])
