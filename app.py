@@ -216,7 +216,11 @@ CUSTOM_CSS = """
   --shadow: 0 1px 2px rgba(16,24,40,0.04), 0 1px 3px rgba(16,24,40,0.06);
 }
 
-.gradio-container.dark {
+/* Gradio itself already puts a `dark` class on <body> automatically
+   (matching the visitor's OS/browser dark-mode preference on load), and
+   our own toggle button below also flips that same class -- so native
+   Gradio components and our custom sections always stay in sync. */
+body.dark {
   --bg: #0B0F1A;
   --panel: #121826;
   --panel-2: #17202F;
@@ -368,16 +372,18 @@ CUSTOM_CSS = """
 }
 """
 
-# Small, purely client-side toggle. Adds/removes Gradio's own '.dark' class
-# on the container, which our CSS above already knows how to theme -- no
-# server call involved, so this cannot error at runtime.
+# Small, purely client-side toggle. Flips the exact same '.dark' class that
+# Gradio itself already adds to <body> when the visitor's system is in dark
+# mode -- so native components (buttons, inputs, accordion) and our custom
+# sections (header, cards, progress bar) always match, in both directions.
+# No server call is involved, so this can never error at runtime. The label
+# stays neutral (rather than trying to reflect current state) so it's never
+# wrong on first load, regardless of the visitor's system theme.
 THEME_TOGGLE_HTML = (
     "<div class='theme-toggle-wrap'>"
-    "<button type='button' class='theme-toggle-btn' onclick=\""
-    "var c=document.querySelector('.gradio-container');"
-    "c.classList.toggle('dark');"
-    "this.textContent = c.classList.contains('dark') ? '\u2600\ufe0f Light mode' : '\U0001F319 Dark mode';"
-    "\">\U0001F319 Dark mode</button>"
+    "<button type='button' class='theme-toggle-btn' "
+    "onclick=\"document.body.classList.toggle('dark');\">"
+    "\U0001F313 Light / Dark</button>"
     "</div>"
 )
 
