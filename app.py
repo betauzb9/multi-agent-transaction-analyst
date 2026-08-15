@@ -34,40 +34,40 @@ from src.graph import get_app, config
 from src.state import initial_state
 from src.memory import remember_turn
 
-APP_TITLE = "AI Transaction Analyst"
-APP_SUBTITLE = "Ask a question about your business transactions in plain English. A team of specialist AI agents finds the answer and double-checks it before you see it."
+APP_TITLE = "AI Tranzaksiya Tahlilchisi"
+APP_SUBTITLE = "Biznes tranzaksiyalaringiz haqida savolingizni oddiy tilda yozing — o'zbek, rus yoki ingliz, farqi yo'q. Mutaxassis AI agentlar jamoasi javobni topadi va sizga ko'rsatishdan oldin uni ikki karra tekshiradi."
 
 # Friendlier, more natural phrasing than the raw technical originals --
 # same underlying questions (categorization count, taxonomy, unseen
 # merchant handling, classify a sample transaction), easier to read.
 EXAMPLE_QUESTIONS = [
-    "How many transactions fall under 'Dining & Coffee'?",
-    "What spending categories does this system use?",
-    "What happens when the AI sees a brand-new merchant it's never seen before?",
-    "What category would a $5.75 charge from 'SQ *STARBUCKS #4471' get?",
+    "Nechta tranzaksiya 'Kafe va restoranlar' toifasiga tushadi?",
+    "Tizim qanday sarf-xarajat toifalaridan foydalanadi?",
+    "AI oldin hech qachon ko'rmagan yangi merchantni ko'rsa, nima bo'ladi?",
+    "'CLICK KORZINKA #4471' tavsifli, 85 000 so'mlik tranzaksiya qaysi toifaga tushadi?",
 ]
 
 # Plain-language, one-line captions shown while a given agent node is
 # working. These deliberately avoid jargon like "supervisor" / "critic".
 BUSINESS_CAPTIONS = {
-    "supervisor": "Understanding what you're asking\u2026",
-    "retriever": "Looking through the documentation\u2026",
-    "web": "Searching the web for extra context\u2026",
-    "data": "Querying the transaction database\u2026",
-    "code": "Running the calculations\u2026",
-    "generate": "Writing up the answer\u2026",
-    "critic": "Double-checking the answer for accuracy\u2026",
+    "supervisor": "Savolingiz tushunilmoqda\u2026",
+    "retriever": "Hujjatlar orasidan qidirilmoqda\u2026",
+    "web": "Qo'shimcha ma'lumot uchun internetdan qidirilmoqda\u2026",
+    "data": "Tranzaksiyalar bazasidan so'rov olinmoqda\u2026",
+    "code": "Hisob-kitoblar bajarilmoqda\u2026",
+    "generate": "Javob yozilmoqda\u2026",
+    "critic": "Javob aniqligi tekshirilmoqda\u2026",
 }
 
 # The 4 stages shown in the progress bar.
 STAGE_DEFS = [
-    ("understanding", "\U0001F9ED", "Understanding"),
-    ("gathering", "\U0001F50D", "Researching"),
-    ("drafting", "\u270D\uFE0F", "Drafting"),
-    ("verifying", "\u2705", "Verifying"),
+    ("understanding", "\U0001F9ED", "Tushunish"),
+    ("gathering", "\U0001F50D", "Qidiruv"),
+    ("drafting", "\u270D\uFE0F", "Yozish"),
+    ("verifying", "\u2705", "Tekshirish"),
 ]
 
-PLACEHOLDER_ANSWER = "_The answer will appear here once the agents finish \u2014 usually a few seconds._"
+PLACEHOLDER_ANSWER = "_Agentlar ishni tugatgach, javob shu yerda paydo bo'ladi \u2014 odatda bir necha soniyada._"
 
 
 def _simple_stage_reached(trace_events):
@@ -90,12 +90,12 @@ def _render_progress(trace_events, done=False):
     reached = 4 if done else _simple_stage_reached(trace_events)
 
     if done:
-        caption = "Answer ready \u2014 verified by the quality-check agent."
+        caption = "Javob tayyor \u2014 sifat nazorati agenti tomonidan tekshirildi."
     elif trace_events:
         last_node = trace_events[-1][0]
-        caption = BUSINESS_CAPTIONS.get(last_node, "Working on it\u2026")
+        caption = BUSINESS_CAPTIONS.get(last_node, "Ishlanmoqda\u2026")
     else:
-        caption = "Ask a question above and watch the agents get to work."
+        caption = "Yuqorida savol yozing va agentlar ishga tushishini kuzating."
 
     steps_html = []
     total = len(STAGE_DEFS)
@@ -137,14 +137,14 @@ def run_and_trace(question: str):
         yield (
             _render_progress([], done=False),
             PLACEHOLDER_ANSWER,
-            gr.update(value="Ask a question above to get started.", visible=True),
+            gr.update(value="Boshlash uchun yuqorida savol yozing.", visible=True),
         )
         return
 
     app = get_app()
     trace_events = []
     final_answer = ""
-    working_note = "_Agents are working on it\u2026_"
+    working_note = "_Agentlar ishlamoqda\u2026_"
 
     yield (
         _render_progress([], done=False),
@@ -178,14 +178,14 @@ def run_and_trace(question: str):
     else:
         yield (
             _render_progress(trace_events, done=False),
-            "_No answer was produced \u2014 try rephrasing the question._",
-            gr.update(value="No answer was produced \u2014 try rephrasing the question.", visible=True),
+            "_Javob topilmadi \u2014 savolni boshqacha shaklda qayta yozib ko'ring._",
+            gr.update(value="Javob topilmadi \u2014 savolni boshqacha shaklda qayta yozib ko'ring.", visible=True),
         )
 
 
 def _thumbs_feedback(positive: bool):
     """Cosmetic feedback buttons. Not wired to storage yet -- swap in a DB/Sheet write here later."""
-    gr.Info("Thanks for the feedback! \U0001F44D" if positive else "Thanks \u2014 we'll use this to improve. \U0001F44E")
+    gr.Info("Fikr-mulohaza uchun rahmat! \U0001F44D" if positive else "Rahmat \u2014 buni yaxshilash uchun ishlatamiz. \U0001F44E")
 
 
 # ---------------------------------------------------------------------------
@@ -313,7 +313,7 @@ body.dark {
   box-shadow: var(--shadow);
 }
 #answer-card::before {
-  content: '\\1F4A1  Answer';
+  content: '\\1F4A1  Javob';
   display: block;
   font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
   color: var(--primary); margin-bottom: 12px;
@@ -383,7 +383,7 @@ THEME_TOGGLE_HTML = (
     "<div class='theme-toggle-wrap'>"
     "<button type='button' class='theme-toggle-btn' "
     "onclick=\"document.body.classList.toggle('dark');\">"
-    "\U0001F313 Light / Dark</button>"
+    "\U0001F313 Yorug' / Qorong'i</button>"
     "</div>"
 )
 
@@ -452,7 +452,7 @@ with gr.Blocks(title=APP_TITLE, theme=theme) as demo:
     gr.HTML(
         "<div class='app-header'>"
         + THEME_TOGGLE_HTML
-        + "<div class='eyebrow-bar'><span class='pulse-dot'></span>Live &nbsp;\u00b7&nbsp; AI Analyst // Transaction Intelligence</div>"
+        + "<div class='eyebrow-bar'><span class='pulse-dot'></span>Live &nbsp;\u00b7&nbsp; AI Tahlilchi // Tranzaksiya razvedkasi</div>"
         "<h1>" + APP_TITLE + "</h1>"
         "<p>" + APP_SUBTITLE + "</p>"
         "</div>"
@@ -460,69 +460,69 @@ with gr.Blocks(title=APP_TITLE, theme=theme) as demo:
 
     gr.HTML(
         "<div class='trust-strip'>"
-        "<div class='trust-chip'><span class='n'>\U0001F916</span> 4 specialist AI agents</div>"
-        "<div class='trust-chip'><span class='n'>\u2705</span> Every answer fact-checked</div>"
-        "<div class='trust-chip'><span class='n'>\u26A1</span> Answers in seconds</div>"
-        "<div class='trust-chip'><span class='n'>\U0001F512</span> Read-only over your data</div>"
+        "<div class='trust-chip'><span class='n'>\U0001F916</span> 4 ta mutaxassis AI agent</div>"
+        "<div class='trust-chip'><span class='n'>\u2705</span> Har bir javob faktlarga tekshiriladi</div>"
+        "<div class='trust-chip'><span class='n'>\u26A1</span> Soniyalar ichida javob</div>"
+        "<div class='trust-chip'><span class='n'>\U0001F512</span> Ma'lumotingiz faqat o'qish uchun ishlatiladi</div>"
         "</div>"
     )
 
-    with gr.Accordion("How does this work? (for the curious)", open=False):
+    with gr.Accordion("Bu qanday ishlaydi? (qiziquvchilar uchun)", open=False):
         gr.Markdown(
-            "When you ask a question, a **Coordinator** agent figures out what "
-            "kind of information is needed and calls in specialists:\n\n"
-            "- **Knowledge Search** \u2014 explains methodology and category definitions\n"
-            "- **Database Query** \u2014 counts and aggregates your transactions\n"
-            "- **Calculation Engine** \u2014 runs exact math, or classifies a new transaction\n"
-            "- **Web Research** \u2014 answers anything outside your own data\n\n"
-            "Once enough evidence is collected, a draft answer is written and then "
-            "reviewed by a separate **Quality Check** agent, which rejects any claim "
-            "that isn't backed by the evidence \u2014 before you ever see it."
+            "Siz savol berganingizda, **Koordinator** agent qanday ma'lumot kerakligini "
+            "aniqlaydi va mutaxassislarni jalb qiladi:\n\n"
+            "- **Bilim qidiruvi** \u2014 metodologiya va toifa ta'riflarini tushuntiradi\n"
+            "- **Baza so'rovi** \u2014 tranzaksiyalaringizni sanaydi va yig'indilaydi\n"
+            "- **Hisoblash mexanizmi** \u2014 aniq matematik hisob-kitob qiladi yoki yangi tranzaksiyani toifalaydi\n"
+            "- **Internet qidiruvi** \u2014 o'z ma'lumotingizdan tashqaridagi savollarga javob beradi\n\n"
+            "Yetarli dalil to'plangach, dastlabki javob yoziladi, so'ng uni alohida "
+            "**Sifat nazorati** agenti tekshiradi va dalil bilan tasdiqlanmagan har qanday "
+            "da'voni sizga ko'rsatishdan oldin rad etadi."
         )
 
     question_box = gr.Textbox(
-        label="Your question",
-        placeholder="e.g. How many transactions fall under 'Dining & Coffee'?",
+        label="Savolingiz",
+        placeholder="masalan: Nechta tranzaksiya 'Kafe va restoranlar' toifasiga tushadi?",
         lines=2,
         autofocus=True,
         elem_classes=["cmd-input"],
     )
 
     with gr.Row():
-        submit_btn = gr.Button("Ask", variant="primary", scale=4)
-        clear_btn = gr.ClearButton([question_box], value="Clear", scale=1)
+        submit_btn = gr.Button("So'rash", variant="primary", scale=4)
+        clear_btn = gr.ClearButton([question_box], value="Tozalash", scale=1)
 
     gr.Examples(
         examples=EXAMPLE_QUESTIONS,
         inputs=question_box,
-        label="Try one of these",
+        label="Namunalardan birini sinab ko'ring",
     )
 
     notice_box = gr.Markdown(visible=False)
 
     with gr.Row():
         with gr.Column(scale=3):
-            gr.Markdown("Answer", elem_classes=["section-label"])
+            gr.Markdown("Javob", elem_classes=["section-label"])
             answer_box = gr.Markdown(
                 value=PLACEHOLDER_ANSWER,
                 elem_id="answer-card",
             )
             gr.HTML(
                 "<div class='feedback-row'>"
-                "<span>Was this answer helpful?</span>"
+                "<span>Bu javob foydali bo'ldimi?</span>"
                 "</div>"
             )
             with gr.Row():
-                thumbs_up_btn = gr.Button("\U0001F44D Yes", size="sm", scale=0)
-                thumbs_down_btn = gr.Button("\U0001F44E No", size="sm", scale=0)
+                thumbs_up_btn = gr.Button("\U0001F44D Ha", size="sm", scale=0)
+                thumbs_down_btn = gr.Button("\U0001F44E Yo'q", size="sm", scale=0)
 
         with gr.Column(scale=2):
-            gr.Markdown("Agent activity", elem_classes=["section-label"])
+            gr.Markdown("Agentlar faoliyati", elem_classes=["section-label"])
             with gr.Column(elem_id="progress-panel"):
                 progress_box = gr.HTML(_render_progress([]))
 
     gr.HTML(
-        "<div class='app-footer'>Built with LangGraph + Gemini \u00b7 answers are generated by AI and reviewed automatically \u2014 verify anything critical.</div>"
+        "<div class='app-footer'>LangGraph + Gemini asosida qurilgan \u00b7 javoblar AI tomonidan yaratiladi va avtomatik tekshiriladi \u2014 muhim qarorlar uchun har doim tasdiqlang.</div>"
     )
 
     question_box.submit(
