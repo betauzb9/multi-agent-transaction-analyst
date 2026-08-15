@@ -23,10 +23,7 @@ from src.memory import remember_turn
 
 
 APP_TITLE = "Multi-Agent AI Analyst"
-APP_SUBTITLE = (
-    "Ask about categorized transactions, the category taxonomy, or the model's methodology. "
-    "Watch the agents think in real time: supervisor -> specialist(s) -> critic -> answer."
-)
+APP_SUBTITLE = "Ask a question about your transactions. Watch four specialist agents answer it live."
 
 EXAMPLE_QUESTIONS = [
     "How many transactions were categorized as Dining & Coffee?",
@@ -88,16 +85,17 @@ def run_and_trace(question: str):
     """Streams each graph step to the UI as it happens, then the final answer."""
     question = (question or "").strip()
     if not question:
-        yield _render_trace([]), "", gr.update(value="Ask a question above to get started.", visible=True)
+        yield _render_trace([]), PLACEHOLDER_ANSWER, gr.update(value="Ask a question above to get started.", visible=True)
         return
 
     app = get_app()
     trace_events = []
     final_answer = ""
+    working_note = "_Agents are working on it…_"
 
     yield (
         "<div class='trace-thinking'>\U0001F916 Agents are working on it…</div>",
-        "",
+        working_note,
         gr.update(value="", visible=False),
     )
 
@@ -111,7 +109,7 @@ def run_and_trace(question: str):
                 trace_events.append((node_name, steps[-1]))
             if node_state.get("answer"):
                 final_answer = node_state["answer"]
-            yield _render_trace(trace_events), final_answer, gr.update(visible=False)
+            yield _render_trace(trace_events), (final_answer or working_note), gr.update(visible=False)
 
     if final_answer:
         remember_turn(question, final_answer)
@@ -119,7 +117,7 @@ def run_and_trace(question: str):
     else:
         yield (
             _render_trace(trace_events),
-            "",
+            "_No answer was produced — try rephrasing the question._",
             gr.update(value="No answer was produced — try rephrasing the question.", visible=True),
         )
 
@@ -127,16 +125,49 @@ def run_and_trace(question: str):
 CUSTOM_CSS = """
 .app-header {
     text-align: center;
-    padding: 8px 0 4px 0;
+    padding: 6px 0 2px 0;
 }
 .app-header h1 {
-    font-size: 1.9rem;
-    margin-bottom: 0.25rem;
+    font-size: 1.7rem;
+    margin-bottom: 0.2rem;
 }
 .app-header p {
     color: var(--body-text-color-subdued);
-    max-width: 680px;
+    max-width: 560px;
     margin: 0 auto;
+    font-size: 0.95rem;
+}
+
+/* ---- section labels ---- */
+.section-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--body-text-color-subdued);
+    margin: 0 0 6px 2px;
+}
+
+/* ---- answer card: the thing people actually came for ---- */
+#answer-card {
+    border: 1px solid var(--border-color-primary);
+    border-left: 4px solid var(--primary-500, #f0883e);
+    border-radius: 12px;
+    padding: 18px 20px;
+    background: var(--background-fill-secondary);
+    min-height: 96px;
+    font-size: 1.05rem;
+    line-height: 1.55;
+}
+#answer-card p:first-child { margin-top: 0; }
+#answer-card p:last-child { margin-bottom: 0; }
+#answer-card.placeholder { color: var(--body-text-color-subdued); font-size: 0.95rem; }
+
+/* ---- trace timeline ---- */
+#trace-panel {
+    max-height: 420px;
+    overflow-y: auto;
+    padding-right: 4px;
 }
 .trace-timeline {
     display: flex;
@@ -151,14 +182,17 @@ CUSTOM_CSS = """
     border-radius: 10px;
     border: 1px solid var(--border-color-primary);
     background: var(--background-fill-secondary);
-    animation: trace-fade-in 0.25s ease-out;
+    animation: trace-fade-in 0.2s ease-out;
 }
-.trace-icon { font-size: 1.15rem; line-height: 1.4; }
-.trace-text { font-size: 0.92rem; line-height: 1.4; }
+@media (prefers-reduced-motion: reduce) {
+    .trace-step { animation: none; }
+}
+.trace-icon { font-size: 1.1rem; line-height: 1.4; flex-shrink: 0; }
+.trace-text { font-size: 0.88rem; line-height: 1.4; }
 .trace-raw {
     display: block;
     font-family: var(--font-mono, monospace);
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     color: var(--body-text-color-subdued);
     margin-top: 2px;
 }
@@ -171,52 +205,58 @@ CUSTOM_CSS = """
     border-radius: 10px;
     border: 1px dashed var(--border-color-primary);
     color: var(--body-text-color-subdued);
-    font-size: 0.92rem;
+    font-size: 0.9rem;
+    text-align: center;
 }
-#answer-card textarea {
-    font-size: 1.02rem !important;
-    line-height: 1.5 !important;
+
+@keyframes trace-fade-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- small screens: stack cleanly, cap trace height ---- */
+@media (max-width: 768px) {
+    #trace-panel { max-height: 260px; }
+    .app-header h1 { font-size: 1.4rem; }
 }
 """
 
 theme = gr.themes.Soft(primary_hue="orange", secondary_hue="slate")
 
-with gr.Blocks(title=APP_TITLE, css=CUSTOM_CSS) as demo:
+PLACEHOLDER_ANSWER = "_The answer will appear here once the agents finish — usually a few seconds._"
+
+with gr.Blocks(title=APP_TITLE) as demo:
     gr.HTML("<div class='app-header'><h1>\U0001F916 " + APP_TITLE + "</h1><p>" + APP_SUBTITLE + "</p></div>")
 
+    question_box = gr.Textbox(
+        label="Your question",
+        placeholder="e.g. How many transactions were categorized as Dining & Coffee?",
+        lines=2,
+        autofocus=True,
+    )
     with gr.Row():
-        with gr.Column(scale=5):
-            question_box = gr.Textbox(
-                label="Your question",
-                placeholder="e.g. How many transactions were categorized as Dining & Coffee?",
-                lines=2,
-                autofocus=True,
-            )
-            with gr.Row():
-                submit_btn = gr.Button("Ask", variant="primary", scale=3)
-                clear_btn = gr.ClearButton([question_box], value="Clear", scale=1)
-            gr.Examples(
-                examples=EXAMPLE_QUESTIONS,
-                inputs=question_box,
-                label="Try one of these",
-            )
+        submit_btn = gr.Button("Ask", variant="primary", scale=4)
+        clear_btn = gr.ClearButton([question_box], value="Clear", scale=1)
+    gr.Examples(
+        examples=EXAMPLE_QUESTIONS,
+        inputs=question_box,
+        label="Try one of these",
+    )
 
     notice_box = gr.Markdown(visible=False)
 
     with gr.Row():
         with gr.Column(scale=3):
-            gr.Markdown("### Answer")
-            answer_box = gr.Textbox(
-                label="",
-                lines=6,
-                interactive=False,
-             
+            gr.Markdown("Answer", elem_classes=["section-label"])
+            answer_box = gr.Markdown(
+                value=PLACEHOLDER_ANSWER,
                 elem_id="answer-card",
-                placeholder="The answer will appear here once the agents finish.",
+                elem_classes=["placeholder"],
             )
         with gr.Column(scale=2):
-            gr.Markdown("### Live agent trace")
-            trace_box = gr.HTML(_render_trace([]))
+            gr.Markdown("Live agent trace", elem_classes=["section-label"])
+            with gr.Column(elem_id="trace-panel"):
+                trace_box = gr.HTML(_render_trace([]))
 
     question_box.submit(
         run_and_trace, inputs=question_box, outputs=[trace_box, answer_box, notice_box]
@@ -229,4 +269,4 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7860))
     use_share = os.environ.get("GRADIO_SHARE", "false").lower() == "true"
     print(f"[startup] launching Gradio on 0.0.0.0:{port} (share={use_share})", flush=True)
-    demo.launch(server_name="0.0.0.0", server_port=port, share=use_share, ssr_mode=False)
+    demo.launch(server_name="0.0.0.0", server_port=port, share=use_share, ssr_mode=False, css=CUSTOM_CSS)
