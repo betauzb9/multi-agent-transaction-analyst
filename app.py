@@ -3,9 +3,9 @@ Business-friendly frontend for the Multi-Agent Transaction Analyst.
 
 WHAT THIS FILE DOES (presentation layer only):
   - Defaults to ENGLISH (so the assignment's language requirement is met
-    out of the box), with a one-click EN / O'ZBEKCHA toggle in the header
-    -- so you can demo the localized version too without keeping two
-    separate files.
+    out of the box), with a Language dropdown in the header
+    (English / O'zbekcha / Русский) -- so you can demo any localized
+    version without keeping separate files.
   - A light, professional "dashboard" look by default, with a one-click
     Light/Dark toggle (pure CSS + a tiny bit of client-side JS -- no
     server round-trip, so it can never error out).
@@ -101,6 +101,7 @@ LANG = {
         "notice_start": "Ask a question above to get started.",
         "notice_no_answer": "No answer was produced \u2014 try rephrasing the question.",
         "answer_no_answer": "_No answer was produced \u2014 try rephrasing the question._",
+        "lang_selector_label": "Language",
     },
     "uz": {
         "toggle_label": "\U0001F310 English",
@@ -162,8 +163,79 @@ LANG = {
         "notice_start": "Boshlash uchun yuqorida savol yozing.",
         "notice_no_answer": "Javob topilmadi \u2014 savolni boshqacha shaklda qayta yozib ko'ring.",
         "answer_no_answer": "_Javob topilmadi \u2014 savolni boshqacha shaklda qayta yozib ko'ring._",
+        "lang_selector_label": "Til",
+    },
+    "ru": {
+        "app_title": "ИИ-аналитик транзакций",
+        "app_subtitle": "Задайте вопрос о своих бизнес-транзакциях простым языком — на русском, узбекском или английском, без разницы. Команда специализированных ИИ-агентов найдёт ответ и дважды проверит его, прежде чем показать вам.",
+        "eyebrow": "Прямой эфир &nbsp;\u00b7&nbsp; ИИ-аналитик // Анализ транзакций",
+        "trust": [
+            "\U0001F916 4 специализированных ИИ-агента",
+            "\u2705 Каждый ответ проверяется на фактах",
+            "\u26A1 Ответы за секунды",
+            "\U0001F512 Доступ к данным только для чтения",
+        ],
+        "accordion_title": "Как это работает? (для любопытных)",
+        "accordion_body": (
+            "Когда вы задаёте вопрос, агент **Координатор** определяет, какая "
+            "информация нужна, и подключает специалистов:\n\n"
+            "- **Поиск по базе знаний** \u2014 объясняет методологию и определения категорий\n"
+            "- **Запрос к базе данных** \u2014 считает и агрегирует ваши транзакции\n"
+            "- **Вычислительный модуль** \u2014 выполняет точные расчёты или классифицирует новую транзакцию\n"
+            "- **Веб-поиск** \u2014 отвечает на вопросы, выходящие за рамки ваших данных\n\n"
+            "Когда собрано достаточно доказательств, пишется черновой ответ, который затем "
+            "проверяет отдельный агент **Контроль качества** \u2014 он отклоняет любое "
+            "утверждение, не подтверждённое доказательствами, прежде чем вы его увидите."
+        ),
+        "question_label": "Ваш вопрос",
+        "question_placeholder": "например: Сколько транзакций относится к категории 'Кафе и рестораны'?",
+        "ask_btn": "Спросить",
+        "clear_btn": "Очистить",
+        "examples_label": "Попробуйте один из примеров",
+        "examples": [
+            "Сколько транзакций относится к категории 'Кафе и рестораны'?",
+            "Какие категории расходов использует эта система?",
+            "Что произойдёт, если ИИ увидит совершенно нового продавца, которого раньше не встречал?",
+            "К какой категории отнесётся списание 5,75 $ от 'SQ *STARBUCKS #4471'?",
+        ],
+        "answer_label": "Ответ",
+        "placeholder_answer": "_Ответ появится здесь, как только агенты закончат работу \u2014 обычно через несколько секунд._",
+        "feedback_q": "Был ли этот ответ полезен?",
+        "thumbs_up": "\U0001F44D Да",
+        "thumbs_down": "\U0001F44E Нет",
+        "feedback_thanks_up": "Спасибо за отзыв! \U0001F44D",
+        "feedback_thanks_down": "Спасибо \u2014 мы используем это, чтобы стать лучше. \U0001F44E",
+        "agent_activity_label": "Активность агентов",
+        "footer": "Создано на LangGraph + Gemini \u00b7 ответы генерируются ИИ и проверяются автоматически \u2014 всегда перепроверяйте важные решения.",
+        "stage_labels": ["Понимание", "Поиск", "Написание", "Проверка"],
+        "captions": {
+            "supervisor": "Разбираемся, что вы спрашиваете\u2026",
+            "retriever": "Ищем в документации\u2026",
+            "web": "Ищем дополнительный контекст в интернете\u2026",
+            "data": "Делаем запрос к базе данных транзакций\u2026",
+            "code": "Выполняем расчёты\u2026",
+            "generate": "Пишем ответ\u2026",
+            "critic": "Проверяем точность ответа\u2026",
+        },
+        "caption_working_default": "Работаем над этим\u2026",
+        "caption_done": "Ответ готов \u2014 проверен агентом контроля качества.",
+        "caption_idle": "Задайте вопрос выше и наблюдайте за работой агентов.",
+        "working_note": "_Агенты работают над этим\u2026_",
+        "notice_start": "Задайте вопрос выше, чтобы начать.",
+        "notice_no_answer": "Ответ не был получен \u2014 попробуйте переформулировать вопрос.",
+        "answer_no_answer": "_Ответ не был получен \u2014 попробуйте переформулировать вопрос._",
+        "lang_selector_label": "Язык",
     },
 }
+
+# Display names for the language selector -- shown in each language's own
+# script regardless of the current UI language (a standard, universally
+# understood convention for language pickers).
+LANG_CHOICES = [
+    ("English", "en"),
+    ("O'zbekcha", "uz"),
+    ("Русский", "ru"),
+]
 
 DEFAULT_LANG = "en"
 
@@ -322,18 +394,19 @@ def _footer_html(lang: str) -> str:
     return "<div class='app-footer'>" + LANG[lang]["footer"] + "</div>"
 
 
-def switch_language(current_lang: str):
-    """Flips en <-> uz and returns fresh values for every translated component.
+def switch_language(selected_lang: str):
+    """Applies the chosen language (en / uz / ru) and returns fresh values
+    for every translated component.
 
     Pure text swap -- the agent graph, the streaming contract, and all
     business logic are completely untouched by this.
     """
-    new_lang = "uz" if current_lang == "en" else "en"
+    new_lang = selected_lang if selected_lang in LANG else DEFAULT_LANG
     t = LANG[new_lang]
 
     return (
         new_lang,
-        gr.update(value=t["toggle_label"]),
+        gr.update(label=t["lang_selector_label"]),
         _header_html(new_lang),
         _trust_html(new_lang),
         gr.update(label=t["accordion_title"]),
@@ -425,7 +498,22 @@ body.dark {
   transition: all 0.15s ease;
 }
 .theme-toggle-btn:hover { border-color: var(--primary); color: var(--primary); }
-.lang-toggle-btn { border-radius: 999px !important; font-size: 0.82rem !important; }
+
+/* Language dropdown: rendered as a compact pill to match the theme toggle. */
+.lang-toggle-btn { min-width: 130px !important; }
+.lang-toggle-btn label span { font-size: 0.72rem !important; color: var(--text-dim) !important; }
+.lang-toggle-btn .wrap-inner,
+.lang-toggle-btn input,
+.lang-toggle-btn .secondary-wrap {
+  border-radius: 999px !important;
+  background: var(--panel) !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: var(--shadow) !important;
+  font-size: 0.82rem !important;
+  font-weight: 600 !important;
+  color: var(--text) !important;
+}
+.lang-toggle-btn:hover .wrap-inner { border-color: var(--primary) !important; }
 
 /* ---- header ---- */
 .app-header { text-align: center; padding: 4px 0 4px 0; }
@@ -625,8 +713,15 @@ with gr.Blocks(title=LANG[DEFAULT_LANG]["app_title"], theme=theme) as demo:
 
     with gr.Row(elem_classes=["controls-row"]):
         gr.HTML(THEME_TOGGLE_HTML)
-        lang_btn = gr.Button(
-            LANG[DEFAULT_LANG]["toggle_label"], size="sm", scale=0, elem_classes=["lang-toggle-btn"]
+        lang_selector = gr.Dropdown(
+            choices=LANG_CHOICES,
+            value=DEFAULT_LANG,
+            label=LANG[DEFAULT_LANG]["lang_selector_label"],
+            scale=0,
+            min_width=140,
+            elem_classes=["lang-toggle-btn"],
+            interactive=True,
+            filterable=False,
         )
 
     header_html = gr.HTML(_header_html(DEFAULT_LANG))
@@ -692,13 +787,13 @@ with gr.Blocks(title=LANG[DEFAULT_LANG]["app_title"], theme=theme) as demo:
     ex_btn_2.click(_make_example_click(2), inputs=lang_state, outputs=question_box)
     ex_btn_3.click(_make_example_click(3), inputs=lang_state, outputs=question_box)
 
-    # --- language toggle: swaps every translated component in one go ---
-    lang_btn.click(
+    # --- language selector: swaps every translated component in one go ---
+    lang_selector.change(
         switch_language,
-        inputs=lang_state,
+        inputs=lang_selector,
         outputs=[
             lang_state,
-            lang_btn,
+            lang_selector,
             header_html,
             trust_html,
             accordion,
