@@ -2,16 +2,18 @@
 Business-friendly frontend for the Multi-Agent Transaction Analyst.
 
 WHAT THIS FILE DOES (presentation layer only):
+  - Defaults to ENGLISH (so the assignment's language requirement is met
+    out of the box), with a one-click EN / O'ZBEKCHA toggle in the header
+    -- so you can demo the localized version too without keeping two
+    separate files.
   - A light, professional "dashboard" look by default, with a one-click
-    Light/Dark toggle in the top-right corner (pure CSS + a tiny bit of
-    client-side JS -- no server round-trip, so it can never error out).
-  - A single, plain-English progress bar while the agents work
+    Light/Dark toggle (pure CSS + a tiny bit of client-side JS -- no
+    server round-trip, so it can never error out).
+  - A single, plain-language progress bar while the agents work
     (Understanding -> Researching -> Drafting -> Verifying) with a live
-    one-line caption -- no agent jargon, no raw trace log. Built for a
-    non-technical audience.
+    one-line caption -- no agent jargon, no raw trace log.
   - A trust/feature strip under the header and a plain-language
-    "How does this work?" accordion -- good for a presentation.
-  - Friendlier, more natural example questions.
+    "How does this work?" accordion.
   - Cosmetic thumbs up/down feedback buttons under the answer.
 
 Nothing about src/graph.py, src/state.py, src/memory.py, or the streaming
@@ -34,40 +36,139 @@ from src.graph import get_app, config
 from src.state import initial_state
 from src.memory import remember_turn
 
-APP_TITLE = "AI Tranzaksiya Tahlilchisi"
-APP_SUBTITLE = "Biznes tranzaksiyalaringiz haqida savolingizni oddiy tilda yozing — o'zbek, rus yoki ingliz, farqi yo'q. Mutaxassis AI agentlar jamoasi javobni topadi va sizga ko'rsatishdan oldin uni ikki karra tekshiradi."
-
-# Friendlier, more natural phrasing than the raw technical originals --
-# same underlying questions (categorization count, taxonomy, unseen
-# merchant handling, classify a sample transaction), easier to read.
-EXAMPLE_QUESTIONS = [
-    "Nechta tranzaksiya 'Kafe va restoranlar' toifasiga tushadi?",
-    "Tizim qanday sarf-xarajat toifalaridan foydalanadi?",
-    "AI oldin hech qachon ko'rmagan yangi merchantni ko'rsa, nima bo'ladi?",
-    "'CLICK KORZINKA #4471' tavsifli, 85 000 so'mlik tranzaksiya qaysi toifaga tushadi?",
-]
-
-# Plain-language, one-line captions shown while a given agent node is
-# working. These deliberately avoid jargon like "supervisor" / "critic".
-BUSINESS_CAPTIONS = {
-    "supervisor": "Savolingiz tushunilmoqda\u2026",
-    "retriever": "Hujjatlar orasidan qidirilmoqda\u2026",
-    "web": "Qo'shimcha ma'lumot uchun internetdan qidirilmoqda\u2026",
-    "data": "Tranzaksiyalar bazasidan so'rov olinmoqda\u2026",
-    "code": "Hisob-kitoblar bajarilmoqda\u2026",
-    "generate": "Javob yozilmoqda\u2026",
-    "critic": "Javob aniqligi tekshirilmoqda\u2026",
+# ---------------------------------------------------------------------------
+# Translations. Everything user-visible lives here so the EN / O'ZBEKCHA
+# toggle only ever has to swap dictionary values -- no logic changes.
+# ---------------------------------------------------------------------------
+LANG = {
+    "en": {
+        "toggle_label": "\U0001F310 O'zbekcha",
+        "app_title": "AI Transaction Analyst",
+        "app_subtitle": "Ask a question about your business transactions in plain English. A team of specialist AI agents finds the answer and double-checks it before you see it.",
+        "eyebrow": "Live &nbsp;\u00b7&nbsp; AI Analyst // Transaction Intelligence",
+        "trust": [
+            "\U0001F916 4 specialist AI agents",
+            "\u2705 Every answer fact-checked",
+            "\u26A1 Answers in seconds",
+            "\U0001F512 Read-only over your data",
+        ],
+        "accordion_title": "How does this work? (for the curious)",
+        "accordion_body": (
+            "When you ask a question, a **Coordinator** agent figures out what "
+            "kind of information is needed and calls in specialists:\n\n"
+            "- **Knowledge Search** \u2014 explains methodology and category definitions\n"
+            "- **Database Query** \u2014 counts and aggregates your transactions\n"
+            "- **Calculation Engine** \u2014 runs exact math, or classifies a new transaction\n"
+            "- **Web Research** \u2014 answers anything outside your own data\n\n"
+            "Once enough evidence is collected, a draft answer is written and then "
+            "reviewed by a separate **Quality Check** agent, which rejects any claim "
+            "that isn't backed by the evidence \u2014 before you ever see it."
+        ),
+        "question_label": "Your question",
+        "question_placeholder": "e.g. How many transactions fall under 'Dining & Coffee'?",
+        "ask_btn": "Ask",
+        "clear_btn": "Clear",
+        "examples_label": "Try one of these",
+        "examples": [
+            "How many transactions fall under 'Dining & Coffee'?",
+            "What spending categories does this system use?",
+            "What happens when the AI sees a brand-new merchant it's never seen before?",
+            "What category would a $5.75 charge from 'SQ *STARBUCKS #4471' get?",
+        ],
+        "answer_label": "Answer",
+        "placeholder_answer": "_The answer will appear here once the agents finish \u2014 usually a few seconds._",
+        "feedback_q": "Was this answer helpful?",
+        "thumbs_up": "\U0001F44D Yes",
+        "thumbs_down": "\U0001F44E No",
+        "feedback_thanks_up": "Thanks for the feedback! \U0001F44D",
+        "feedback_thanks_down": "Thanks \u2014 we'll use this to improve. \U0001F44E",
+        "agent_activity_label": "Agent activity",
+        "footer": "Built with LangGraph + Gemini \u00b7 answers are generated by AI and reviewed automatically \u2014 verify anything critical.",
+        "stage_labels": ["Understanding", "Researching", "Drafting", "Verifying"],
+        "captions": {
+            "supervisor": "Understanding what you're asking\u2026",
+            "retriever": "Looking through the documentation\u2026",
+            "web": "Searching the web for extra context\u2026",
+            "data": "Querying the transaction database\u2026",
+            "code": "Running the calculations\u2026",
+            "generate": "Writing up the answer\u2026",
+            "critic": "Double-checking the answer for accuracy\u2026",
+        },
+        "caption_working_default": "Working on it\u2026",
+        "caption_done": "Answer ready \u2014 verified by the quality-check agent.",
+        "caption_idle": "Ask a question above and watch the agents get to work.",
+        "working_note": "_Agents are working on it\u2026_",
+        "notice_start": "Ask a question above to get started.",
+        "notice_no_answer": "No answer was produced \u2014 try rephrasing the question.",
+        "answer_no_answer": "_No answer was produced \u2014 try rephrasing the question._",
+    },
+    "uz": {
+        "toggle_label": "\U0001F310 English",
+        "app_title": "AI Tranzaksiya Tahlilchisi",
+        "app_subtitle": "Biznes tranzaksiyalaringiz haqida savolingizni oddiy tilda yozing \u2014 o'zbek, rus yoki ingliz, farqi yo'q. Mutaxassis AI agentlar jamoasi javobni topadi va sizga ko'rsatishdan oldin uni ikki karra tekshiradi.",
+        "eyebrow": "Live &nbsp;\u00b7&nbsp; AI Tahlilchi // Tranzaksiya razvedkasi",
+        "trust": [
+            "\U0001F916 4 ta mutaxassis AI agent",
+            "\u2705 Har bir javob faktlarga tekshiriladi",
+            "\u26A1 Soniyalar ichida javob",
+            "\U0001F512 Ma'lumotingiz faqat o'qish uchun ishlatiladi",
+        ],
+        "accordion_title": "Bu qanday ishlaydi? (qiziquvchilar uchun)",
+        "accordion_body": (
+            "Siz savol berganingizda, **Koordinator** agent qanday ma'lumot kerakligini "
+            "aniqlaydi va mutaxassislarni jalb qiladi:\n\n"
+            "- **Bilim qidiruvi** \u2014 metodologiya va toifa ta'riflarini tushuntiradi\n"
+            "- **Baza so'rovi** \u2014 tranzaksiyalaringizni sanaydi va yig'indilaydi\n"
+            "- **Hisoblash mexanizmi** \u2014 aniq matematik hisob-kitob qiladi yoki yangi tranzaksiyani toifalaydi\n"
+            "- **Internet qidiruvi** \u2014 o'z ma'lumotingizdan tashqaridagi savollarga javob beradi\n\n"
+            "Yetarli dalil to'plangach, dastlabki javob yoziladi, so'ng uni alohida "
+            "**Sifat nazorati** agenti tekshiradi va dalil bilan tasdiqlanmagan har qanday "
+            "da'voni sizga ko'rsatishdan oldin rad etadi."
+        ),
+        "question_label": "Savolingiz",
+        "question_placeholder": "masalan: Nechta tranzaksiya 'Kafe va restoranlar' toifasiga tushadi?",
+        "ask_btn": "So'rash",
+        "clear_btn": "Tozalash",
+        "examples_label": "Namunalardan birini sinab ko'ring",
+        "examples": [
+            "Nechta tranzaksiya 'Kafe va restoranlar' toifasiga tushadi?",
+            "Tizim qanday sarf-xarajat toifalaridan foydalanadi?",
+            "AI oldin hech qachon ko'rmagan yangi merchantni ko'rsa, nima bo'ladi?",
+            "'CLICK KORZINKA #4471' tavsifli, 85 000 so'mlik tranzaksiya qaysi toifaga tushadi?",
+        ],
+        "answer_label": "Javob",
+        "placeholder_answer": "_Agentlar ishni tugatgach, javob shu yerda paydo bo'ladi \u2014 odatda bir necha soniyada._",
+        "feedback_q": "Bu javob foydali bo'ldimi?",
+        "thumbs_up": "\U0001F44D Ha",
+        "thumbs_down": "\U0001F44E Yo'q",
+        "feedback_thanks_up": "Fikr-mulohaza uchun rahmat! \U0001F44D",
+        "feedback_thanks_down": "Rahmat \u2014 buni yaxshilash uchun ishlatamiz. \U0001F44E",
+        "agent_activity_label": "Agentlar faoliyati",
+        "footer": "LangGraph + Gemini asosida qurilgan \u00b7 javoblar AI tomonidan yaratiladi va avtomatik tekshiriladi \u2014 muhim qarorlar uchun har doim tasdiqlang.",
+        "stage_labels": ["Tushunish", "Qidiruv", "Yozish", "Tekshirish"],
+        "captions": {
+            "supervisor": "Savolingiz tushunilmoqda\u2026",
+            "retriever": "Hujjatlar orasidan qidirilmoqda\u2026",
+            "web": "Qo'shimcha ma'lumot uchun internetdan qidirilmoqda\u2026",
+            "data": "Tranzaksiyalar bazasidan so'rov olinmoqda\u2026",
+            "code": "Hisob-kitoblar bajarilmoqda\u2026",
+            "generate": "Javob yozilmoqda\u2026",
+            "critic": "Javob aniqligi tekshirilmoqda\u2026",
+        },
+        "caption_working_default": "Ishlanmoqda\u2026",
+        "caption_done": "Javob tayyor \u2014 sifat nazorati agenti tomonidan tekshirildi.",
+        "caption_idle": "Yuqorida savol yozing va agentlar ishga tushishini kuzating.",
+        "working_note": "_Agentlar ishlamoqda\u2026_",
+        "notice_start": "Boshlash uchun yuqorida savol yozing.",
+        "notice_no_answer": "Javob topilmadi \u2014 savolni boshqacha shaklda qayta yozib ko'ring.",
+        "answer_no_answer": "_Javob topilmadi \u2014 savolni boshqacha shaklda qayta yozib ko'ring._",
+    },
 }
 
-# The 4 stages shown in the progress bar.
-STAGE_DEFS = [
-    ("understanding", "\U0001F9ED", "Tushunish"),
-    ("gathering", "\U0001F50D", "Qidiruv"),
-    ("drafting", "\u270D\uFE0F", "Yozish"),
-    ("verifying", "\u2705", "Tekshirish"),
-]
+DEFAULT_LANG = "en"
 
-PLACEHOLDER_ANSWER = "_Agentlar ishni tugatgach, javob shu yerda paydo bo'ladi \u2014 odatda bir necha soniyada._"
+# Icons for the 4-step progress bar (language-independent).
+STAGE_ICONS = ["\U0001F9ED", "\U0001F50D", "\u270D\uFE0F", "\u2705"]
 
 
 def _simple_stage_reached(trace_events):
@@ -85,21 +186,22 @@ def _simple_stage_reached(trace_events):
     return reached
 
 
-def _render_progress(trace_events, done=False):
-    """Renders the 4-step progress bar in plain English, for a non-technical audience."""
+def _render_progress(trace_events, lang=DEFAULT_LANG, done=False):
+    """Renders the 4-step progress bar in plain language, for a non-technical audience."""
+    t = LANG[lang]
     reached = 4 if done else _simple_stage_reached(trace_events)
 
     if done:
-        caption = "Javob tayyor \u2014 sifat nazorati agenti tomonidan tekshirildi."
+        caption = t["caption_done"]
     elif trace_events:
         last_node = trace_events[-1][0]
-        caption = BUSINESS_CAPTIONS.get(last_node, "Ishlanmoqda\u2026")
+        caption = t["captions"].get(last_node, t["caption_working_default"])
     else:
-        caption = "Yuqorida savol yozing va agentlar ishga tushishini kuzating."
+        caption = t["caption_idle"]
 
     steps_html = []
-    total = len(STAGE_DEFS)
-    for i, (_key, icon, label) in enumerate(STAGE_DEFS, start=1):
+    total = len(STAGE_ICONS)
+    for i, (icon, label) in enumerate(zip(STAGE_ICONS, t["stage_labels"]), start=1):
         if i < reached or done:
             state = "done"
         elif i == reached:
@@ -125,29 +227,32 @@ def _render_progress(trace_events, done=False):
     )
 
 
-def run_and_trace(question: str):
+def run_and_trace(question: str, lang: str):
     """Streams progress to the UI as the agents work, then the final answer.
 
     Yields (progress_html, answer_markdown, notice_update). The agent-side
     logic and the streaming contract (node_state['steps'] / ['answer']) are
-    unchanged from the original app.py.
+    unchanged from the original app.py -- only which language dict is used
+    for display text depends on `lang`.
     """
+    lang = lang if lang in LANG else DEFAULT_LANG
+    t = LANG[lang]
     question = (question or "").strip()
     if not question:
         yield (
-            _render_progress([], done=False),
-            PLACEHOLDER_ANSWER,
-            gr.update(value="Boshlash uchun yuqorida savol yozing.", visible=True),
+            _render_progress([], lang, done=False),
+            t["placeholder_answer"],
+            gr.update(value=t["notice_start"], visible=True),
         )
         return
 
     app = get_app()
     trace_events = []
     final_answer = ""
-    working_note = "_Agentlar ishlamoqda\u2026_"
+    working_note = t["working_note"]
 
     yield (
-        _render_progress([], done=False),
+        _render_progress([], lang, done=False),
         working_note,
         gr.update(value="", visible=False),
     )
@@ -163,7 +268,7 @@ def run_and_trace(question: str):
             if node_state.get("answer"):
                 final_answer = node_state["answer"]
             yield (
-                _render_progress(trace_events, done=bool(final_answer)),
+                _render_progress(trace_events, lang, done=bool(final_answer)),
                 (final_answer or working_note),
                 gr.update(visible=False),
             )
@@ -171,29 +276,104 @@ def run_and_trace(question: str):
     if final_answer:
         remember_turn(question, final_answer)
         yield (
-            _render_progress(trace_events, done=True),
+            _render_progress(trace_events, lang, done=True),
             final_answer,
             gr.update(visible=False),
         )
     else:
         yield (
-            _render_progress(trace_events, done=False),
-            "_Javob topilmadi \u2014 savolni boshqacha shaklda qayta yozib ko'ring._",
-            gr.update(value="Javob topilmadi \u2014 savolni boshqacha shaklda qayta yozib ko'ring.", visible=True),
+            _render_progress(trace_events, lang, done=False),
+            t["answer_no_answer"],
+            gr.update(value=t["notice_no_answer"], visible=True),
         )
 
 
-def _thumbs_feedback(positive: bool):
+def _thumbs_feedback(positive: bool, lang: str):
     """Cosmetic feedback buttons. Not wired to storage yet -- swap in a DB/Sheet write here later."""
-    gr.Info("Fikr-mulohaza uchun rahmat! \U0001F44D" if positive else "Rahmat \u2014 buni yaxshilash uchun ishlatamiz. \U0001F44E")
+    t = LANG[lang if lang in LANG else DEFAULT_LANG]
+    gr.Info(t["feedback_thanks_up"] if positive else t["feedback_thanks_down"])
+
+
+def _header_html(lang: str) -> str:
+    t = LANG[lang]
+    return (
+        "<div class='app-header'>"
+        "<div class='eyebrow-bar'><span class='pulse-dot'></span>" + t["eyebrow"] + "</div>"
+        "<h1>" + t["app_title"] + "</h1>"
+        "<p>" + t["app_subtitle"] + "</p>"
+        "</div>"
+    )
+
+
+def _trust_html(lang: str) -> str:
+    t = LANG[lang]
+    chips = "".join(
+        "<div class='trust-chip'>" + chip + "</div>" for chip in t["trust"]
+    )
+    return "<div class='trust-strip'>" + chips + "</div>"
+
+
+def _feedback_html(lang: str) -> str:
+    t = LANG[lang]
+    return "<div class='feedback-row'><span>" + t["feedback_q"] + "</span></div>"
+
+
+def _footer_html(lang: str) -> str:
+    return "<div class='app-footer'>" + LANG[lang]["footer"] + "</div>"
+
+
+def switch_language(current_lang: str):
+    """Flips en <-> uz and returns fresh values for every translated component.
+
+    Pure text swap -- the agent graph, the streaming contract, and all
+    business logic are completely untouched by this.
+    """
+    new_lang = "uz" if current_lang == "en" else "en"
+    t = LANG[new_lang]
+
+    return (
+        new_lang,
+        gr.update(value=t["toggle_label"]),
+        _header_html(new_lang),
+        _trust_html(new_lang),
+        gr.update(label=t["accordion_title"]),
+        t["accordion_body"],
+        gr.update(label=t["question_label"], placeholder=t["question_placeholder"]),
+        gr.update(value=t["ask_btn"]),
+        gr.update(value=t["clear_btn"]),
+        gr.update(value=t["examples_label"]),
+        gr.update(value=t["examples"][0]),
+        gr.update(value=t["examples"][1]),
+        gr.update(value=t["examples"][2]),
+        gr.update(value=t["examples"][3]),
+        gr.update(value=t["answer_label"]),
+        t["placeholder_answer"],
+        _feedback_html(new_lang),
+        gr.update(value=t["thumbs_up"]),
+        gr.update(value=t["thumbs_down"]),
+        gr.update(value=t["agent_activity_label"]),
+        _render_progress([], new_lang, done=False),
+        _footer_html(new_lang),
+        gr.update(visible=False),
+    )
+
+
+def _make_example_click(idx: int):
+    """Each example chip inserts the CURRENT-language version of question #idx,
+    read live from lang_state -- so it stays correct even after a language switch."""
+    def _fn(lang):
+        t = LANG[lang if lang in LANG else DEFAULT_LANG]
+        return t["examples"][idx]
+    return _fn
 
 
 # ---------------------------------------------------------------------------
 # Theme + CSS
 #   Light palette lives under :root (default).
-#   Dark palette lives under .dark (Gradio's standard dark-mode class), and
-#   is also what the toggle button in the header adds/removes on
-#   .gradio-container -- pure client-side, so it can never break the app.
+#   Dark palette lives under body.dark -- Gradio's own dark-mode class,
+#   which it already adds automatically based on the visitor's system
+#   preference, and which our own toggle button also flips. This keeps
+#   native Gradio components and our custom sections always in sync.
 # ---------------------------------------------------------------------------
 CUSTOM_CSS = """
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&display=swap');
@@ -216,10 +396,6 @@ CUSTOM_CSS = """
   --shadow: 0 1px 2px rgba(16,24,40,0.04), 0 1px 3px rgba(16,24,40,0.06);
 }
 
-/* Gradio itself already puts a `dark` class on <body> automatically
-   (matching the visitor's OS/browser dark-mode preference on load), and
-   our own toggle button below also flips that same class -- so native
-   Gradio components and our custom sections always stay in sync. */
 body.dark {
   --bg: #0B0F1A;
   --panel: #121826;
@@ -240,8 +416,8 @@ body.dark {
 
 .gradio-container { font-family: 'Inter', ui-sans-serif, sans-serif; background: var(--bg) !important; transition: background 0.2s ease; }
 
-/* ---- theme toggle button ---- */
-.theme-toggle-wrap { position: absolute; top: 14px; right: 14px; z-index: 20; }
+/* ---- top controls row (theme + language toggles) ---- */
+.controls-row { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-bottom: 2px; }
 .theme-toggle-btn {
   font-family: 'Inter', sans-serif; font-size: 0.82rem; font-weight: 600;
   background: var(--panel); color: var(--text); border: 1px solid var(--line);
@@ -249,9 +425,10 @@ body.dark {
   transition: all 0.15s ease;
 }
 .theme-toggle-btn:hover { border-color: var(--primary); color: var(--primary); }
+.lang-toggle-btn { border-radius: 999px !important; font-size: 0.82rem !important; }
 
 /* ---- header ---- */
-.app-header { text-align: center; padding: 8px 0 4px 0; position: relative; }
+.app-header { text-align: center; padding: 4px 0 4px 0; }
 .eyebrow-bar {
   display: inline-flex; align-items: center; gap: 8px;
   font-size: 11.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
@@ -286,7 +463,6 @@ body.dark {
   padding: 9px 14px; font-size: 0.85rem; font-weight: 600; color: var(--text);
   box-shadow: var(--shadow);
 }
-.trust-chip .n { color: var(--primary); }
 
 /* ---- section labels ---- */
 .section-label {
@@ -313,10 +489,9 @@ body.dark {
   box-shadow: var(--shadow);
 }
 #answer-card::before {
-  content: '\\1F4A1  Javob';
+  content: '\\1F4A1';
   display: block;
-  font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
-  color: var(--primary); margin-bottom: 12px;
+  font-size: 15px; margin-bottom: 12px;
 }
 #answer-card p:first-of-type { margin-top: 0; }
 #answer-card p:last-of-type { margin-bottom: 0; }
@@ -324,6 +499,9 @@ body.dark {
 /* ---- feedback row ---- */
 .feedback-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
 .feedback-row span { font-size: 0.82rem; color: var(--text-dim); }
+
+/* ---- example chips ---- */
+.example-chip { font-size: 0.85rem !important; white-space: normal !important; height: auto !important; }
 
 /* ---- progress bar ---- */
 #progress-panel { margin-top: 2px; }
@@ -367,24 +545,18 @@ body.dark {
 
 @media (max-width: 768px) {
   .app-header h1 { font-size: 1.5rem; }
-  .theme-toggle-wrap { position: static; display: flex; justify-content: center; margin-bottom: 10px; }
   .sstep-label { display: none; }
 }
 """
 
 # Small, purely client-side toggle. Flips the exact same '.dark' class that
 # Gradio itself already adds to <body> when the visitor's system is in dark
-# mode -- so native components (buttons, inputs, accordion) and our custom
-# sections (header, cards, progress bar) always match, in both directions.
-# No server call is involved, so this can never error at runtime. The label
-# stays neutral (rather than trying to reflect current state) so it's never
-# wrong on first load, regardless of the visitor's system theme.
+# mode -- so native components and our custom sections always match, in
+# both directions. No server call is involved, so this can never error.
 THEME_TOGGLE_HTML = (
-    "<div class='theme-toggle-wrap'>"
     "<button type='button' class='theme-toggle-btn' "
     "onclick=\"document.body.classList.toggle('dark');\">"
-    "\U0001F313 Yorug' / Qorong'i</button>"
-    "</div>"
+    "\U0001F313 Light / Dark</button>"
 )
 
 theme = gr.themes.Base(
@@ -448,91 +620,108 @@ theme = gr.themes.Base(
     code_background_fill_dark="#17202F",
 )
 
-with gr.Blocks(title=APP_TITLE, theme=theme) as demo:
-    gr.HTML(
-        "<div class='app-header'>"
-        + THEME_TOGGLE_HTML
-        + "<div class='eyebrow-bar'><span class='pulse-dot'></span>Live &nbsp;\u00b7&nbsp; AI Tahlilchi // Tranzaksiya razvedkasi</div>"
-        "<h1>" + APP_TITLE + "</h1>"
-        "<p>" + APP_SUBTITLE + "</p>"
-        "</div>"
-    )
+with gr.Blocks(title=LANG[DEFAULT_LANG]["app_title"], theme=theme) as demo:
+    lang_state = gr.State(DEFAULT_LANG)
 
-    gr.HTML(
-        "<div class='trust-strip'>"
-        "<div class='trust-chip'><span class='n'>\U0001F916</span> 4 ta mutaxassis AI agent</div>"
-        "<div class='trust-chip'><span class='n'>\u2705</span> Har bir javob faktlarga tekshiriladi</div>"
-        "<div class='trust-chip'><span class='n'>\u26A1</span> Soniyalar ichida javob</div>"
-        "<div class='trust-chip'><span class='n'>\U0001F512</span> Ma'lumotingiz faqat o'qish uchun ishlatiladi</div>"
-        "</div>"
-    )
-
-    with gr.Accordion("Bu qanday ishlaydi? (qiziquvchilar uchun)", open=False):
-        gr.Markdown(
-            "Siz savol berganingizda, **Koordinator** agent qanday ma'lumot kerakligini "
-            "aniqlaydi va mutaxassislarni jalb qiladi:\n\n"
-            "- **Bilim qidiruvi** \u2014 metodologiya va toifa ta'riflarini tushuntiradi\n"
-            "- **Baza so'rovi** \u2014 tranzaksiyalaringizni sanaydi va yig'indilaydi\n"
-            "- **Hisoblash mexanizmi** \u2014 aniq matematik hisob-kitob qiladi yoki yangi tranzaksiyani toifalaydi\n"
-            "- **Internet qidiruvi** \u2014 o'z ma'lumotingizdan tashqaridagi savollarga javob beradi\n\n"
-            "Yetarli dalil to'plangach, dastlabki javob yoziladi, so'ng uni alohida "
-            "**Sifat nazorati** agenti tekshiradi va dalil bilan tasdiqlanmagan har qanday "
-            "da'voni sizga ko'rsatishdan oldin rad etadi."
+    with gr.Row(elem_classes=["controls-row"]):
+        gr.HTML(THEME_TOGGLE_HTML)
+        lang_btn = gr.Button(
+            LANG[DEFAULT_LANG]["toggle_label"], size="sm", scale=0, elem_classes=["lang-toggle-btn"]
         )
 
+    header_html = gr.HTML(_header_html(DEFAULT_LANG))
+    trust_html = gr.HTML(_trust_html(DEFAULT_LANG))
+
+    with gr.Accordion(LANG[DEFAULT_LANG]["accordion_title"], open=False) as accordion:
+        accordion_body = gr.Markdown(LANG[DEFAULT_LANG]["accordion_body"])
+
     question_box = gr.Textbox(
-        label="Savolingiz",
-        placeholder="masalan: Nechta tranzaksiya 'Kafe va restoranlar' toifasiga tushadi?",
+        label=LANG[DEFAULT_LANG]["question_label"],
+        placeholder=LANG[DEFAULT_LANG]["question_placeholder"],
         lines=2,
         autofocus=True,
         elem_classes=["cmd-input"],
     )
 
     with gr.Row():
-        submit_btn = gr.Button("So'rash", variant="primary", scale=4)
-        clear_btn = gr.ClearButton([question_box], value="Tozalash", scale=1)
+        submit_btn = gr.Button(LANG[DEFAULT_LANG]["ask_btn"], variant="primary", scale=4)
+        clear_btn = gr.ClearButton([question_box], value=LANG[DEFAULT_LANG]["clear_btn"], scale=1)
 
-    gr.Examples(
-        examples=EXAMPLE_QUESTIONS,
-        inputs=question_box,
-        label="Namunalardan birini sinab ko'ring",
-    )
+    examples_label_md = gr.Markdown(LANG[DEFAULT_LANG]["examples_label"], elem_classes=["section-label"])
+    with gr.Row():
+        ex_btn_0 = gr.Button(LANG[DEFAULT_LANG]["examples"][0], size="sm", elem_classes=["example-chip"])
+        ex_btn_1 = gr.Button(LANG[DEFAULT_LANG]["examples"][1], size="sm", elem_classes=["example-chip"])
+    with gr.Row():
+        ex_btn_2 = gr.Button(LANG[DEFAULT_LANG]["examples"][2], size="sm", elem_classes=["example-chip"])
+        ex_btn_3 = gr.Button(LANG[DEFAULT_LANG]["examples"][3], size="sm", elem_classes=["example-chip"])
 
     notice_box = gr.Markdown(visible=False)
 
     with gr.Row():
         with gr.Column(scale=3):
-            gr.Markdown("Javob", elem_classes=["section-label"])
+            answer_label_md = gr.Markdown(LANG[DEFAULT_LANG]["answer_label"], elem_classes=["section-label"])
             answer_box = gr.Markdown(
-                value=PLACEHOLDER_ANSWER,
+                value=LANG[DEFAULT_LANG]["placeholder_answer"],
                 elem_id="answer-card",
             )
-            gr.HTML(
-                "<div class='feedback-row'>"
-                "<span>Bu javob foydali bo'ldimi?</span>"
-                "</div>"
-            )
+            feedback_html = gr.HTML(_feedback_html(DEFAULT_LANG))
             with gr.Row():
-                thumbs_up_btn = gr.Button("\U0001F44D Ha", size="sm", scale=0)
-                thumbs_down_btn = gr.Button("\U0001F44E Yo'q", size="sm", scale=0)
+                thumbs_up_btn = gr.Button(LANG[DEFAULT_LANG]["thumbs_up"], size="sm", scale=0)
+                thumbs_down_btn = gr.Button(LANG[DEFAULT_LANG]["thumbs_down"], size="sm", scale=0)
 
         with gr.Column(scale=2):
-            gr.Markdown("Agentlar faoliyati", elem_classes=["section-label"])
+            agent_label_md = gr.Markdown(LANG[DEFAULT_LANG]["agent_activity_label"], elem_classes=["section-label"])
             with gr.Column(elem_id="progress-panel"):
-                progress_box = gr.HTML(_render_progress([]))
+                progress_box = gr.HTML(_render_progress([], DEFAULT_LANG))
 
-    gr.HTML(
-        "<div class='app-footer'>LangGraph + Gemini asosida qurilgan \u00b7 javoblar AI tomonidan yaratiladi va avtomatik tekshiriladi \u2014 muhim qarorlar uchun har doim tasdiqlang.</div>"
-    )
+    footer_html = gr.HTML(_footer_html(DEFAULT_LANG))
 
+    # --- main Ask flow ---
     question_box.submit(
-        run_and_trace, inputs=question_box, outputs=[progress_box, answer_box, notice_box]
+        run_and_trace, inputs=[question_box, lang_state], outputs=[progress_box, answer_box, notice_box]
     )
     submit_btn.click(
-        run_and_trace, inputs=question_box, outputs=[progress_box, answer_box, notice_box]
+        run_and_trace, inputs=[question_box, lang_state], outputs=[progress_box, answer_box, notice_box]
     )
-    thumbs_up_btn.click(lambda: _thumbs_feedback(True), outputs=None)
-    thumbs_down_btn.click(lambda: _thumbs_feedback(False), outputs=None)
+    thumbs_up_btn.click(lambda lang: _thumbs_feedback(True, lang), inputs=lang_state, outputs=None)
+    thumbs_down_btn.click(lambda lang: _thumbs_feedback(False, lang), inputs=lang_state, outputs=None)
+
+    # --- example chips: always insert the CURRENT language's question text ---
+    ex_btn_0.click(_make_example_click(0), inputs=lang_state, outputs=question_box)
+    ex_btn_1.click(_make_example_click(1), inputs=lang_state, outputs=question_box)
+    ex_btn_2.click(_make_example_click(2), inputs=lang_state, outputs=question_box)
+    ex_btn_3.click(_make_example_click(3), inputs=lang_state, outputs=question_box)
+
+    # --- language toggle: swaps every translated component in one go ---
+    lang_btn.click(
+        switch_language,
+        inputs=lang_state,
+        outputs=[
+            lang_state,
+            lang_btn,
+            header_html,
+            trust_html,
+            accordion,
+            accordion_body,
+            question_box,
+            submit_btn,
+            clear_btn,
+            examples_label_md,
+            ex_btn_0,
+            ex_btn_1,
+            ex_btn_2,
+            ex_btn_3,
+            answer_label_md,
+            answer_box,
+            feedback_html,
+            thumbs_up_btn,
+            thumbs_down_btn,
+            agent_label_md,
+            progress_box,
+            footer_html,
+            notice_box,
+        ],
+    )
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7860))
