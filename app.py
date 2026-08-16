@@ -73,7 +73,7 @@ LANG = {
             "How many transactions fall under 'Dining & Coffee'?",
             "What spending categories does this system use?",
             "What happens when the AI sees a brand-new merchant it's never seen before?",
-            "What category would a $5.75 charge from 'SQ *STARBUCKS #4471' get?",
+            "What category would an 85,000 so'm charge from 'CLICK KORZINKA #4471' get?",
         ],
         "answer_label": "Answer",
         "placeholder_answer": "_The answer will appear here once the agents finish \u2014 usually a few seconds._",
