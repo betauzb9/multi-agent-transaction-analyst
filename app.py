@@ -406,7 +406,6 @@ def switch_language(selected_lang: str):
 
     return (
         new_lang,
-        gr.update(label=t["lang_selector_label"]),
         _header_html(new_lang),
         _trust_html(new_lang),
         gr.update(label=t["accordion_title"]),
@@ -490,7 +489,8 @@ body.dark {
 .gradio-container { font-family: 'Inter', ui-sans-serif, sans-serif; background: var(--bg) !important; transition: background 0.2s ease; }
 
 /* ---- top controls row (theme + language toggles) ---- */
-.controls-row { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-bottom: 2px; }
+.controls-row { display: flex; justify-content: flex-end; align-items: stretch; gap: 8px; margin-bottom: 6px; }
+.controls-row > * { display: flex; align-items: center; }
 .theme-toggle-btn {
   font-family: 'Inter', sans-serif; font-size: 0.82rem; font-weight: 600;
   background: var(--panel); color: var(--text); border: 1px solid var(--line);
@@ -499,21 +499,29 @@ body.dark {
 }
 .theme-toggle-btn:hover { border-color: var(--primary); color: var(--primary); }
 
-/* Language dropdown: rendered as a compact pill to match the theme toggle. */
-.lang-toggle-btn { min-width: 130px !important; }
-.lang-toggle-btn label span { font-size: 0.72rem !important; color: var(--text-dim) !important; }
-.lang-toggle-btn .wrap-inner,
-.lang-toggle-btn input,
-.lang-toggle-btn .secondary-wrap {
+/* Language dropdown: bare (container=False, show_label=False), so we style
+   it ourselves as a single compact pill matching the theme toggle exactly
+   -- no separate boxed "Language" card, no visible label. */
+.lang-dropdown { min-width: 124px !important; margin: 0 !important; }
+.lang-dropdown, .lang-dropdown > label { background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
+.lang-dropdown ul.options { border-radius: 12px !important; }
+.lang-dropdown [class*="wrap"] {
   border-radius: 999px !important;
   background: var(--panel) !important;
   border: 1px solid var(--line) !important;
   box-shadow: var(--shadow) !important;
+  min-height: 0 !important;
+}
+.lang-dropdown input {
+  font-family: 'Inter', sans-serif !important;
   font-size: 0.82rem !important;
   font-weight: 600 !important;
   color: var(--text) !important;
+  background: transparent !important;
+  cursor: pointer !important;
+  padding: 7px 4px 7px 14px !important;
 }
-.lang-toggle-btn:hover .wrap-inner { border-color: var(--primary) !important; }
+.lang-dropdown:hover [class*="wrap"] { border-color: var(--primary) !important; }
 
 /* ---- header ---- */
 .app-header { text-align: center; padding: 4px 0 4px 0; }
@@ -631,9 +639,56 @@ body.dark {
   color: var(--text-dim); font-size: 0.8rem;
 }
 
+/* ---- entrance animation + micro-interactions (polish pass) ---- */
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.app-header, .trust-strip, #progress-panel .simple-progress {
+  animation: fade-in-up 0.35s ease both;
+}
+.trust-strip { animation-delay: 0.05s; }
+#answer-card, .simple-progress {
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+.trust-chip, .example-chip {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease !important;
+}
+.trust-chip:hover { transform: translateY(-1px); border-color: var(--primary); }
+.example-chip:hover { transform: translateY(-1px); border-color: var(--primary) !important; }
+@media (prefers-reduced-motion: reduce) {
+  .app-header, .trust-strip, #progress-panel .simple-progress { animation: none; }
+  .trust-chip:hover, .example-chip:hover { transform: none; }
+}
+
+/* ---- consistent vertical rhythm ---- */
+.gradio-container { padding-top: 6px; }
+.app-header { margin-bottom: 6px; }
+
+/* ---- mobile responsive pass ---- */
 @media (max-width: 768px) {
+  .gradio-container { padding-left: 12px !important; padding-right: 12px !important; }
+  .controls-row { justify-content: center; flex-wrap: wrap; row-gap: 8px; }
   .app-header h1 { font-size: 1.5rem; }
+  .app-header p { font-size: 0.92rem; padding: 0 4px; }
+  .eyebrow-bar { font-size: 10px; padding: 4px 10px; }
+  .trust-strip { gap: 8px; margin: 14px 0 4px 0; }
+  .trust-chip { font-size: 0.78rem; padding: 7px 11px; }
   .sstep-label { display: none; }
+  .sstep-icon { width: 34px; height: 34px; font-size: 15px; }
+  /* Answer + Agent activity stack into one readable column instead of squeezing side by side */
+  .answer-agent-row { flex-direction: column !important; }
+  #answer-card { padding: 18px 16px; font-size: 1rem; }
+  .simple-progress { padding: 18px 14px 14px 14px; }
+  /* Keep tap targets comfortable and prevent iOS auto-zoom on focus (needs >=16px font) */
+  .cmd-input textarea, .cmd-input input, .lang-dropdown input { font-size: 16px !important; }
+  .example-chip { font-size: 0.82rem !important; }
+}
+
+@media (max-width: 420px) {
+  .trust-strip { flex-direction: column; align-items: stretch; }
+  .trust-chip { justify-content: center; }
+  .example-row { flex-direction: column !important; }
 }
 """
 
@@ -716,10 +771,11 @@ with gr.Blocks(title=LANG[DEFAULT_LANG]["app_title"], theme=theme) as demo:
         lang_selector = gr.Dropdown(
             choices=LANG_CHOICES,
             value=DEFAULT_LANG,
-            label=LANG[DEFAULT_LANG]["lang_selector_label"],
+            show_label=False,
+            container=False,
             scale=0,
-            min_width=140,
-            elem_classes=["lang-toggle-btn"],
+            min_width=124,
+            elem_classes=["lang-dropdown"],
             interactive=True,
             filterable=False,
         )
@@ -743,16 +799,16 @@ with gr.Blocks(title=LANG[DEFAULT_LANG]["app_title"], theme=theme) as demo:
         clear_btn = gr.ClearButton([question_box], value=LANG[DEFAULT_LANG]["clear_btn"], scale=1)
 
     examples_label_md = gr.Markdown(LANG[DEFAULT_LANG]["examples_label"], elem_classes=["section-label"])
-    with gr.Row():
+    with gr.Row(elem_classes=["example-row"]):
         ex_btn_0 = gr.Button(LANG[DEFAULT_LANG]["examples"][0], size="sm", elem_classes=["example-chip"])
         ex_btn_1 = gr.Button(LANG[DEFAULT_LANG]["examples"][1], size="sm", elem_classes=["example-chip"])
-    with gr.Row():
+    with gr.Row(elem_classes=["example-row"]):
         ex_btn_2 = gr.Button(LANG[DEFAULT_LANG]["examples"][2], size="sm", elem_classes=["example-chip"])
         ex_btn_3 = gr.Button(LANG[DEFAULT_LANG]["examples"][3], size="sm", elem_classes=["example-chip"])
 
     notice_box = gr.Markdown(visible=False)
 
-    with gr.Row():
+    with gr.Row(elem_classes=["answer-agent-row"]):
         with gr.Column(scale=3):
             answer_label_md = gr.Markdown(LANG[DEFAULT_LANG]["answer_label"], elem_classes=["section-label"])
             answer_box = gr.Markdown(
@@ -793,7 +849,6 @@ with gr.Blocks(title=LANG[DEFAULT_LANG]["app_title"], theme=theme) as demo:
         inputs=lang_selector,
         outputs=[
             lang_state,
-            lang_selector,
             header_html,
             trust_html,
             accordion,
