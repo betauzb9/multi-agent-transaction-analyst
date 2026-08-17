@@ -1,160 +1,157 @@
-# AI Transaction Analyst (Multi-Agent Transaction Analyst)
+# 🤖 AI Transaction Analyst (Multi-Agent)
 
-**Ask plain-language questions about your business transactions — a team of 4 specialist AI agents finds the answer, fact-checks it, and hands it back to you.**
+**A multi-agent AI system that categorizes financial transactions and answers natural-language questions about them — with a live, streaming trace of the agents thinking, localized to the Uzbek market.**
 
 🔗 **Live demo:** [multi-agent-transaction-analyst.onrender.com](https://multi-agent-transaction-analyst.onrender.com/)
+📦 **Code:** [github.com/betauzb9/multi-agent-transaction-analyst](https://github.com/betauzb9/multi-agent-transaction-analyst)
 
-
-📦 **Code (GitHub):** [github.com/betauzb9/multi-agent-transaction-analyst](https://github.com/betauzb9/multi-agent-transaction-analyst)
-
-> ⏳ **Note:** this project runs on Render's free tier. If the service has been
-> idle for a few minutes it "spins down" — the first request may take
-> 30–60 seconds to wake it back up; requests after that are fast.
+> ⏳ The demo runs on a free Render instance and spins down after inactivity — the first request after a while may take ~50s to wake up.
 
 ---
 
-## What is this?
+## What it does
 
-An AI analyst that lets a small/medium business owner ask **natural-language**
-questions about their bank/Payme/Click transactions — in Uzbek, Russian, or
-English, the system detects the language automatically. For example:
+Ask questions in **Uzbek, Russian, or English** — the system detects the language and answers in kind — like:
 
-- *"How many transactions fall under 'Dining & Coffee'?"*
-- *"What spending categories does this system use?"*
+- *"How many transactions fall under 'Dining & Coffee' (Kafe va restoranlar)?"*
+- *"What is the category taxonomy used by this system?"*
+- *"How does the model handle a previously unseen merchant?"*
 - *"What category would a transaction described as 'CLICK KORZINKA #4471' for 85,000 so'm get?"*
 
-Unlike a plain chatbot, this isn't one big AI call — it's a team of specialist
-agents, each handling its own part of the job, with a final answer that goes
-through a dedicated **quality-check (Critic)** agent before it's ever shown
-to the user.
+...and watch a team of specialist agents route the question, gather evidence, draft an answer, and have it checked by a critic before it's shown — all visible in real time in the UI.
 
 ## How it works
 
-```
-User question
-        │
-        ▼
-   Supervisor — reads the question, decides which specialist(s) are needed
-        │
-        ├──▶ Knowledge Search (Retriever)  — pulls from methodology/category docs
-        ├──▶ Database Query (SQL agent)    — counts and aggregates real transactions
-        ├──▶ Calculation Engine (Code agent) — exact math, or classifies a new transaction
-        └──▶ Web Research (Web agent)      — answers anything outside the local data
-        │
-        ▼
-   Draft answer written from everything gathered so far
-        │
-        ▼
-   Quality Check (Critic) — checks the draft against the evidence, rejects unsupported claims
-        │
-        ▼
-   Final answer — in whichever language the question was asked in
+A **supervisor agent** routes each question to one or more specialists, then a **critic agent** verifies the drafted answer against the evidence before approving it (or sending it back for revision):
+
+```mermaid
+flowchart LR
+    Q[Question] --> S{Supervisor}
+    S -->|docs / methodology| R[Retriever agent]
+    S -->|outside knowledge| W[Web agent]
+    S -->|counts / aggregates| D[Data / SQL agent]
+    S -->|math / classifier calls| C[Code agent]
+    R --> S
+    W --> S
+    D --> S
+    C --> S
+    S -->|enough evidence| G[Generate answer]
+    G --> CR{Critic}
+    CR -->|approved| A[Final answer]
+    CR -->|needs revision| S
 ```
 
-The Supervisor can call more than one specialist in sequence when needed (e.g.
-pull a number from the database, then add a "why" from the knowledge base), and
-if the Critic rejects a draft, the loop runs again before anything is shown.
+- **ML core** — a scikit-learn text classifier assigns a spending category to a raw transaction (merchant text + amount + type), falling back to `Other / Uncategorized` when confidence is low rather than guessing.
+- **Retriever agent** — answers "why/how" questions from the ingested methodology and taxonomy docs (embedded, local Qdrant vector store).
+- **Data (SQL) agent** — runs read-only queries over the categorized-transactions database.
+- **Code agent** — runs sandboxed Python for exact math/aggregation, or calls the trained classifier directly on a new transaction.
+- **Web agent** — optional, answers questions outside the local docs/database (skips gracefully without a Tavily key).
+- **Critic** — rejects an answer that states a number not backed by the SQL/code evidence, capped at a fixed number of revision passes so the graph always terminates.
+- **Memory** — recalls earlier turns so follow-up questions ("...and last quarter?") have context.
+- **Answer language matching** — the generation step detects the language the question was asked in and writes the final answer in that same language, independent of the (Uzbek) language of the underlying docs/database.
 
-## Key features
+## Localized to the Uzbek market
 
-- **Multilingual:** ask in Uzbek, Russian, or English — the answer comes back
-  in the same language, even though the underlying documentation is in Uzbek.
-- **Localized to the Uzbek market:** the sample transaction data mirrors
-  Payme/Click/Uzcard/Humo/P2P statement formats and real Uzbek merchants
-  (Korzinka, Yandex Go, Beeline, etc.), with amounts in so'm (UZS).
-- **Automatic categorization model:** a trained ML model classifies new/unseen
-  transaction text into one of 12 categories (or "Other/Uncategorized" when
-  confidence is too low).
-- **Every answer is fact-checked:** a separate Critic agent verifies the final
-  answer against the gathered evidence before it's shown.
-- **Live agent trace:** the UI shows which agent is working and what it's doing
-  in real time — not a black box.
-- **Read-only by design:** the SQL agent only ever runs `SELECT` queries — there
-  is no way for it to write to or modify the database.
+The sample transaction data (`data/generate_synthetic_data.py`) mirrors real local
+payment-system statement text rather than generic US merchants:
+
+- Merchant text follows **Payme / Click / Uzcard / Humo / P2P** statement formats
+  (e.g. `CLICK KORZINKA #4471`, `PAYME *ISH HAQI TO'LOVI`)
+- Real Uzbek merchants and services: Korzinka, Makro, Yandex Go, Beeline/Ucell/Uzmobile,
+  Uzbekistan Airways, etc.
+- Amounts in **so'm (UZS)**, at realistic ranges per category
+- 12 category labels in Uzbek (`Oziq-ovqat`, `Kafe va restoranlar`, `Transport`, ...),
+  documented in `docs/category_taxonomy.md`
+
+To plug in a real business's transactions instead of the synthetic set, see
+"Using your own data" below.
 
 ## Tech stack
 
-| Layer | Technology |
+| Layer | Tools |
 |---|---|
-| Multi-agent orchestration | LangGraph |
-| LLM | Google Gemini |
-| Vector search (RAG) | Qdrant |
-| ML categorization | scikit-learn (TF-IDF + Logistic Regression) |
-| Database | SQLite |
-| Frontend | Gradio |
-| Observability | Langfuse |
-| Deployment | Render |
+| Agent orchestration | [LangGraph](https://github.com/langchain-ai/langgraph), [LangChain](https://github.com/langchain-ai/langchain) |
+| LLM + embeddings | Google Gemini (`gemini-2.5-flash`, `text-embedding-004`) — free tier, no card |
+| Vector store | [Qdrant](https://qdrant.tech/) (embedded, local, no signup) |
+| Structured data | SQLite |
+| Classifier | scikit-learn (TF-IDF + linear model) |
+| Frontend | [Gradio](https://www.gradio.app/) |
+| Observability | [Langfuse](https://langfuse.com/) (optional tracing) |
+| Deployment | [Render](https://render.com/) (free, always-on web service) |
 
-## Project structure
+## Results
 
-```
-├── app.py                        # Gradio frontend (chat UI, live agent trace)
-├── data/
-│   ├── generate_synthetic_data.py   # Uzbek-market-realistic sample data generator
-│   ├── transactions.csv             # Transactions used for ML training
-│   └── company.db                   # SQLite DB the SQL agent queries
-├── models/
-│   ├── categorizer.joblib           # Trained categorization model
-│   └── eval_report.json             # Model accuracy report
-├── docs/
-│   ├── category_taxonomy.md         # The 12 categories and the reasoning behind them
-│   ├── methodology.md               # How the model was trained, normalization approach
-│   └── limitations.md               # Known limitations and next steps
-├── src/
-│   ├── graph.py                     # LangGraph agent graph
-│   ├── agents/                      # Supervisor, Retriever, SQL, Code, Web, Critic
-│   ├── ml/                          # Features, training, prediction
-│   └── ingestion.py                 # Loads docs into Qdrant (for RAG)
-└── requirements.txt
-```
+| Metric | Score |
+|---|---|
+| Classifier accuracy (held-out, Uzbek-market synthetic data) | **100%** (`models/eval_report.json`) |
+| Classifier macro-F1 (held-out) | **100%** |
+| Agent pipeline — avg. LLM-judge score | 4.75 / 5 across a 12-question test set *(from the pre-localization English test set — see note below)* |
 
-## Running locally
+> ⚠️ **Both numbers need a caveat.** The 100% classifier accuracy is inflated because
+> the current synthetic dataset gives each category a distinct set of merchants with
+> almost no overlap — real transaction data (e.g. a supermarket chain that sells both
+> groceries and electronics) will score lower and more realistically. The 4.75/5 agent
+> score is from `src/eval/testset.json`, which still asks about the **old English
+> category names** (e.g. "Dining & Coffee") that no longer exist in the localized
+> dataset — update `testset.json` to the new Uzbek category names and re-run
+> `python -m src.eval.harness` before quoting this number as current.
+
+## Quickstart
 
 ```bash
-# 1. Set up the environment
-python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
+git clone https://github.com/betauzb9/multi-agent-transaction-analyst.git
+cd multi-agent-transaction-analyst
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
+cp .env.example .env   # then fill in your own GOOGLE_API_KEY
+```
 
-# 2. Configure API keys
-cp .env.example .env
-# Open .env and fill in GOOGLE_API_KEY (required), plus TAVILY_API_KEY and
-# LANGFUSE_* (optional)
+Get a free key (never share one across accounts — rate limits are per key):
+- `GOOGLE_API_KEY` — **required**. https://aistudio.google.com/apikey (no card)
+- `TAVILY_API_KEY` — optional, enables the web agent. https://tavily.com (no card)
+- `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` — optional, tracing. https://cloud.langfuse.com (no card)
 
-# 3. Prepare the data and model
+```bash
+# 1. Build the ML core
 python data/generate_synthetic_data.py
 python -m src.ml.train_categorizer
-python -m src.ingestion
+python -m src.ingestion            # embeds docs/ into the local vector store
 
-# 4. Run the app
+# 2. Ask a question end-to-end (any of the 3 supported languages)
+python -m src.graph "Nechta tranzaksiya 'Kafe va restoranlar' toifasiga tushadi?"
+
+# 3. Run the evaluation harness
+python -m src.eval.harness
+
+# 4. Launch the UI
 python app.py
 ```
 
 Open `http://localhost:7860` in your browser.
 
-## Plugging in real business transactions
+## Using your own data
 
-By default the system runs on synthetic (but realistic-looking) data. To
-connect your own real transactions instead:
+By default the system runs on the localized synthetic dataset above. To connect
+a real business's transactions instead:
 
 1. Export a CSV from your bank/Payme/Click account.
 2. Map the columns to `date, description, amount, txn_type, category`
    (`category` can be left blank — the model will predict it).
 3. Replace `data/transactions.csv` and `data/company.db` with the real data.
 4. Re-run `python -m src.ml.train_categorizer` and check the accuracy in
-   `models/eval_report.json`.
+   `models/eval_report.json` — expect it to be lower (and more realistic) than
+   the synthetic-data number above.
 5. Push the changes to GitHub — Render will redeploy automatically (see below).
 
 Details: `docs/methodology.md` §1.
 
 ## Deploying on Render
 
-The project is hosted on [Render](https://render.com). To redeploy:
-
 **Build Command:**
 ```bash
 pip install -r requirements.txt && python data/generate_synthetic_data.py && python -m src.ml.train_categorizer && python -m src.ingestion
 ```
+(Skip `generate_synthetic_data.py` if `data/transactions.csv` already holds real committed data.)
 
 **Start Command:**
 ```bash
@@ -164,17 +161,45 @@ python app.py
 **Environment Variables (Render dashboard → Environment):**
 | Variable | Required | Notes |
 |---|---|---|
-| `GOOGLE_API_KEY` | ✅ Yes | Used for Gemini LLM and embedding calls |
-| `TAVILY_API_KEY` | Optional | Used by the Web agent for internet search |
-| `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` | Optional | Used for observability |
-| `PYTHONUNBUFFERED` | Recommended | Set to `1` so build logs stream live — otherwise `print()` output gets buffered, making it much harder to see where a stuck build actually is |
+| `GOOGLE_API_KEY` | ✅ Yes | Gemini LLM + embedding calls |
+| `TAVILY_API_KEY` | Optional | Enables the web agent |
+| `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` | Optional | Tracing |
+| `PYTHONUNBUFFERED` | Recommended | Set to `1` so build logs stream live instead of buffering, which makes a stuck build much easier to diagnose |
 
-> 💡 If a deploy freezes for a long time, check `GOOGLE_API_KEY` first — the
-> `src.ingestion` step calls the Gemini embedding API, and an invalid or
-> expired key can cause it to hang for a long time without ever printing
-> an error.
+> 💡 If a deploy freezes for a long time with no error, check `GOOGLE_API_KEY` first —
+> the `src.ingestion` step calls the Gemini embedding API, and an invalid/expired key
+> can cause it to hang without ever printing an error.
 
-## Limitations
+## Project structure
 
-Known limitations of this system (synthetic-data characteristics, handling of
-out-of-vocabulary merchants, etc.) are documented in detail in `docs/limitations.md`.
+```
+data/            Uzbek-market synthetic transaction data generator
+docs/            category taxonomy, methodology, and limitations — ingested by the retriever agent
+models/          trained classifier + evaluation report
+src/
+  config.py      reads settings from .env
+  state.py       shared agent state
+  llm.py         LLM + embeddings client factory
+  ingestion.py   builds the vector store from docs/
+  ml/            classifier training, features, and inference
+  agents/        retriever, web, data (SQL), code, supervisor, critic
+  graph.py       LangGraph wiring — the multi-agent flow
+  memory.py      long-term memory over past turns
+  eval/          test set + evaluation harness (LLM-judge / RAGAS)
+  observability.py   optional Langfuse tracing
+app.py           Gradio frontend + deployment entry point
+```
+
+## Known limitations
+
+- The bundled dataset is synthetic (though Uzbek-market-realistic); a real dataset should be swapped in before drawing production conclusions (see `docs/methodology.md`).
+- A genuinely novel merchant with no overlap with training data falls back to `Other / Uncategorized` rather than being correctly labeled.
+- The critic is itself an LLM and reduces, but doesn't eliminate, the chance of an incorrect answer slipping through.
+- `src/eval/testset.json` still targets the pre-localization English category names — update it and re-run `python -m src.eval.harness` for an up-to-date agent-quality score.
+- Language auto-detection depends on LLM quality and can misfire on very short or mixed-language questions.
+
+See `docs/limitations.md` for the full list of limitations, risks, and recommended next steps.
+
+## License
+
+No license file is currently included — all rights reserved by default. Add a `LICENSE` file (e.g. MIT) if you'd like to allow reuse.
