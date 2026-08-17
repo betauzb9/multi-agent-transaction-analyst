@@ -3,6 +3,7 @@
 **A multi-agent AI system that categorizes financial transactions and answers natural-language questions about them — with a live, streaming trace of the agents thinking, localized to the Uzbek market.**
 
 🔗 **Live demo:** [multi-agent-transaction-analyst.onrender.com](https://multi-agent-transaction-analyst.onrender.com/)
+
 📦 **Code:** [github.com/betauzb9/multi-agent-transaction-analyst](https://github.com/betauzb9/multi-agent-transaction-analyst)
 
 > ⏳ The demo runs on a free Render instance and spins down after inactivity — the first request after a while may take ~50s to wake up.
